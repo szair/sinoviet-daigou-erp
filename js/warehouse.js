@@ -102,19 +102,19 @@ function renderWarehouse() {
     `;
 }
 
-// ⚡ 核心修复点：将入口初始化函数明确挂载到 window 对象上，供 app.js 稳定调用
+// 入口初始化函数明确挂载到 window 对象上，供 app.js 稳定调用
 window.init_warehouse = function() {
-    // 预留给后续可能添加的页面交互监听（目前纯展示和弹窗触发，无需复杂监听，保持干净）
+    // 预留给后续可能添加的页面交互监听
 };
 
-// ⚡ 核心业务黑科技：一键合并并抽取对应的客户档案地址，格式化生成发给第三方货代的交货文本
+// 一键合并并抽取对应的客户档案地址，格式化生成发给第三方货代的交货文本
 window.generateShippingManifest = function(customerName) {
     // 1. 去全局客户库中捞取该买家的完整越南收货信息
     const targetCustProfile = window.ERP_STORE.customers.find(c => c.name === customerName);
     
     const addressText = targetCustProfile 
         ? `Người nhận (收件人): ${targetCustProfile.name}\nSĐT (电话): ${targetCustProfile.phone}\nĐịa chỉ (越南收货地址): ${targetCustProfile.address}`
-        : `Người nhận: ${customerName}\n[⚠️ 提示：请先去【客户管理】完善该买家的收货地址和电话，以便货代打单]`;
+        : `Người nhận: ${customerName}\n[⚠️ 提示：请先去【客户管理】完善该买家的收货地址 and 电话，以便货代打单]`;
 
     // 2. 搜集该客户在集运仓的所有商品及单号后4位尾数
     let goodsTextLines = [];
@@ -127,14 +127,14 @@ window.generateShippingManifest = function(customerName) {
                     itemCount++;
                     const fullTrack = item.track || "无单号";
                     const lastFour = fullTrack.length > 4 ? fullTrack.slice(-4) : fullTrack;
-                    goodsTextLines.push(`   ${itemCount}. [${item.platform}] ${item.name} ➔ 国内快递尾号: *${lastFour}`);
+                    goodsTextLines.push(`   ${itemCount}. [${item.platform}] ${item.name} ➔ Mã vận đơn (尾号): *${lastFour}`);
                 }
             });
         }
     });
 
-    // 3. 排版拼装高保真货代通知文本格式
-    const finalManifestText = `===== 中越通跨境集运·出境托运申报单 =====\n【请货代安排打包转运发往越南】\n\n📌 越南收件人信息：\n${addressText}\n\n📦 本次合单打包商品明细 (共计: ${itemCount} 件)：\n${goodsTextLines.join("\n")}\n\n======================================`;
+    // 3. 按照最新意见组装文本：去掉繁琐标题，换上精简纯越南语核心转运指令
+    const finalManifestText = `Các vận đơn sau đây xin vui lòng gửi đi Việt Nam:\n\n📌 Thông tin người nhận (越南收件信息)：\n${addressText}\n\n📦 Danh sách kiện hàng (商品明细 共计: ${itemCount} 件)：\n${goodsTextLines.join("\n")}`;
 
     // 4. 动态渲染弹窗把文本呈现出来，支持一键复制
     const modalHTML = `
