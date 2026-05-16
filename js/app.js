@@ -1,7 +1,8 @@
-// 全局状态管理中心 - 已全面升级为条目级（items）多商品商品结构
+// 全局状态管理中心
 window.ERP_STORE = {
-    system_rate: 3450, // 初始系统默认汇率 1 CNY = 3450 VND
-    currency_fee: 5,   // 默认代购手续费 5%
+    system_rate: 3450, 
+    currency_fee: 5,   
+    filter_status: null, // ⚡ 核心追加：用于存储首页卡片点击后传递的过滤状态
     orders: [
         {
             id: "#ORD-78901",
@@ -36,7 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const pageTitle = document.getElementById("page-title");
     const menuItems = document.querySelectorAll(".menu-item");
 
-    // 各个子模块路由配置表
     const routes = {
         dashboard: { title: "仪表盘 Dashboard", render: renderDashboard, init: init_dashboard },
         orders: { title: "订单管理 (CN ➔ VN)", render: renderOrders, init: init_orders },
@@ -51,7 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentRoute = routes[viewKey];
         if (!currentRoute) return;
 
-        // 1. 更新左侧菜单高亮状态
         menuItems.forEach(item => {
             if (item.getAttribute("data-target") === viewKey) {
                 item.classList.add("active");
@@ -60,37 +59,26 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // 2. 更新右侧顶部标题
         pageTitle.innerText = currentRoute.title;
-
-        // 3. 动态渲染模块 HTML，加入渐显包裹动画层
         mainView.innerHTML = `<div class="view-section">${currentRoute.render()}</div>`;
 
-        // 4. 执行该模块独有的 DOM 动态交互监听绑定
         if (typeof currentRoute.init === "function") {
             currentRoute.init();
         }
     }
 
-    // 绑定侧边栏点击跳转事件
     menuItems.forEach(item => {
         item.addEventListener("click", (e) => {
             e.preventDefault();
+            // 每次手动切换侧边栏菜单时，清空首页传过来的联动过滤状态
+            if (item.getAttribute("data-target") === "orders") {
+                window.ERP_STORE.filter_status = null;
+            }
             const target = item.getAttribute("data-target");
             window.location.hash = target;
         });
     });
 
-    // 监听浏览器路由 Hash 的上下游前进与回退变动
     window.addEventListener("hashchange", () => router(window.location.hash));
-    
-    // 初始化首屏加载
     router(window.location.hash);
 });
-
-// 全局更新左侧底栏汇率显示辅助函数
-window.updateSidebarRate = function(newRate) {
-    window.ERP_STORE.system_rate = newRate;
-    const disp = document.getElementById("sidebar-rate-display");
-    if(disp) disp.innerText = `1 CNY = ${newRate.toLocaleString()} VND`;
-};
