@@ -1,3 +1,4 @@
+// ⚡ 核心全局配置：指向你绑定的自定义 API 域名
 window.API_BASE_URL = "https://buyapi.imokla.ccwu.cc";
 
 window.ERP_STORE = {
@@ -5,6 +6,7 @@ window.ERP_STORE = {
     currency_fee: 5,   
     filter_status: null,
     current_lang: "zh",
+    
     customers: [],
     orders: [],
     
@@ -37,6 +39,7 @@ window.getText = function(key) {
     return window.ERP_STORE.i18n[lang][key] || key;
 };
 
+// 从 D1 数据库拉取全量订单和客户数据
 window.fetchGlobalDataFromD1 = async function() {
     try {
         const custRes = await fetch(`${window.API_BASE_URL}/api/customers`);
@@ -49,12 +52,14 @@ window.fetchGlobalDataFromD1 = async function() {
     }
 };
 
+// ==========================================
+// 🔐 核心防盗：全自动网页端登录拦截控制中心
+// ==========================================
 window.checkSystemAuth = function() {
     if (sessionStorage.getItem("is_logged_in") === "true") {
         return true; 
     }
 
-    // 📱 手机优化版全屏毛玻璃登录拦截墙
     const loginOverlayHTML = `
         <div id="login-overlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[99999] overflow-y-auto px-4">
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 text-center my-auto">
@@ -122,6 +127,35 @@ window.checkSystemAuth = function() {
     return false; 
 };
 
+// ==========================================
+// 📱 核心新增：手机返回键/侧滑智能劫持与弹窗联动机制
+// ==========================================
+
+// 1. 每当任何业务模块「打开弹窗」时，必须要调用这个函数来向手机历史记录塞入一个虚拟盾牌
+window.pushModalHistoryState = function(modalId) {
+    // 塞入带有专属标记的当前状态，防止网页后退
+    window.history.pushState({ modalActiveId: modalId }, "");
+};
+
+// 2. 监听全局手机返回键/浏览器后退手势 (popstate)
+window.addEventListener("popstate", (event) => {
+    // 抓取当前页面上所有可能存活的代购系统弹窗容器
+    const orderModal = document.getElementById("order-modal");
+    const custModal = document.getElementById("cust-modal");
+    const manifestModal = document.getElementById("manifest-modal");
+
+    // 智能拦截：如果发现有任意一个弹窗开着，立刻执行闭合，并阻断网页整体后退！
+    if (orderModal || custModal || manifestModal) {
+        if (orderModal) orderModal.remove();
+        if (custModal) custModal.remove();
+        if (manifestModal) manifestModal.remove();
+        console.log("🛡️ 已成功拦截手机侧滑返回手势：弹窗已单手关闭，有效防止网页卡死退出。");
+    }
+});
+
+// ==========================================
+// 🚀 全栈系统启动入口
+// ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
     if (window.checkSystemAuth()) {
         await window.fetchGlobalDataFromD1();
@@ -129,7 +163,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 });
 
-// ⚡ 核心手机端适配重绘中心
 window.renderGlobalSkeleton = function() {
     const sidebarMenu = document.getElementById("sidebar-menu");
     const mobileBottomMenu = document.getElementById("mobile-bottom-menu");
@@ -139,7 +172,6 @@ window.renderGlobalSkeleton = function() {
     
     if(!sidebarMenu || !mobileBottomMenu) return;
 
-    // 1. 动态填充 💻 电脑端侧边栏菜单
     const menuItemsHTML = `
         <a href="#dashboard" data-target="dashboard" class="menu-item flex items-center gap-3 px-4 py-3 rounded-xl transition text-xs font-semibold">
             <i class="fa-solid fa-chart-pie w-5 text-sm"></i> ${window.getText('menu_dash')} Dashboard
@@ -162,7 +194,6 @@ window.renderGlobalSkeleton = function() {
     `;
     sidebarMenu.innerHTML = menuItemsHTML;
 
-    // 2. 动态填充 📱 手机端底部金刚按键导航栏 (高度匹配大拇指按压)
     mobileBottomMenu.innerHTML = `
         <a href="#dashboard" data-target="dashboard" class="mobile-menu-item flex flex-col items-center justify-center flex-grow h-full py-1 text-[10px] font-bold transition-all">
             <i class="fa-solid fa-chart-pie text-base mb-0.5"></i><span>${window.getText('menu_dash')}</span>
@@ -186,7 +217,6 @@ window.renderGlobalSkeleton = function() {
 
     if(userRoleText) userRoleText.innerText = window.getText('role_admin');
 
-    // 统一处理电脑和手机端的点击事件激活高亮
     const viewKey = window.location.hash.replace("#", "") || "dashboard";
 
     const allLinks = document.querySelectorAll(".menu-item, .mobile-menu-item");
@@ -194,12 +224,11 @@ window.renderGlobalSkeleton = function() {
         const target = item.getAttribute("data-target");
         if (target === viewKey) {
             item.classList.add("text-indigo-500", "active");
-            if(item.classList.contains("menu-item")) item.classList.remove("text-indigo-500"); // 电脑端高亮走CSS
+            if(item.classList.contains("menu-item")) item.classList.remove("text-indigo-500"); 
         } else {
             item.classList.remove("text-indigo-500", "active");
         }
         
-        // 重新绑定点击跳转监听
         item.addEventListener("click", (e) => {
             e.preventDefault();
             if (target === "orders") { window.ERP_STORE.filter_status = null; }
