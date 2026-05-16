@@ -266,7 +266,7 @@ function openOrderFormModal(editIndex = null) {
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    window.pushModalHistoryState("order-modal"); // ⚡ 物理返回拦截启动
+    window.pushModalHistoryState("order-modal"); 
     setupModalCalculation(editIndex);
 }
 
@@ -286,7 +286,7 @@ function createPlatformItemRow(platform, name, cny, track, status) {
             <div class="col-span-8 sm:col-span-3"><input type="text" placeholder="${isZh?'商品名称':'Tên sản phẩm'}" value="${name}" required class="mo-item-name w-full bg-white border border-slate-200 rounded-lg p-1.5 font-semibold"></div>
             <div class="col-span-4 sm:col-span-2 relative">
                 <span class="absolute left-2 top-2 text-slate-400 font-mono">¥</span>
-                <input type="number" placeholder="${isZh?'本金':'Vốn'}" value="${cny || ''}" required class="mo-item-cny w-full bg-white border border-slate-200 rounded-lg pl-5 pr-1.5 py-1.5 text-right font-mono font-bold text-slate-700">
+                <input type="number" placeholder="${isZh?'本金':'Vốn'}" value="${cny || ''}" required class="w-full bg-white border border-slate-200 rounded-lg pl-5 pr-1.5 py-1.5 text-right font-mono font-bold text-slate-700">
             </div>
             <div class="col-span-5 sm:col-span-3"><input type="text" placeholder="${isZh?'国内单号':'Mã vận đơn'}" value="${track || ''}" class="mo-item-track w-full bg-white border border-slate-200 rounded-lg p-1.5 font-mono text-[11px]"></div>
             <div class="col-span-3 sm:col-span-2 flex gap-1 items-center justify-end">
@@ -360,3 +360,25 @@ function setupModalCalculation(editIndex) {
             targetId = "#ORD-" + Math.floor(10000 + Math.random() * 90000);
             window.ERP_STORE.orders.unshift({ id: targetId, customer: cust, buyer_vnd: vnd, items: itemsList, shipping_fee_cny: 0 });
         }
+
+        const targetPayload = { id: targetId, customer: cust, buyer_vnd: vnd, shipping_fee_cny: shippingFee, items: itemsList };
+        
+        const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(targetPayload)
+        });
+
+        if (res.ok) {
+            closeOrderModal();
+            refreshOrdersView();
+        } else {
+            alert("同步 D1 数据库失败，请重试");
+        }
+    });
+}
+
+window.closeOrderModal = function() {
+    const modal = document.getElementById("order-modal");
+    if (modal) modal.remove();
+};
