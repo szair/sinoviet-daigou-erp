@@ -1,42 +1,90 @@
 function renderOrders() {
     let rowsHTML = "";
-    window.ERP_STORE.orders.forEach((ord, index) => {
-        const productName = ord.desc || "代购商品";
-        const buyerVnd = ord.buyer_vnd ? ord.buyer_vnd.toLocaleString() + " ₫" : "未计算";
-        const trackNums = ord.tracks && ord.tracks.length > 0 ? ord.tracks.join("<br>") : "<span class='text-slate-300'>暂无单号</span>";
+    
+    // 如果系统里没有预设数据，为了演示效果，我们注入一个包含多商品、不同物流状态的示例
+    if (window.ERP_STORE.orders.length === 0) {
+        window.ERP_STORE.orders = [
+            {
+                id: "#ORD-99812",
+                customer: "Tran Thi Mai",
+                buyer_vnd: 4500000,
+                // 将商品和物流单号、状态彻底解耦绑定
+                items: [
+                    { platform: "淘宝", name: "防晒衣", cny: 150, track: "SF142345566", status: "集运仓已到货" },
+                    { platform: "1688", name: "马丁靴", cny: 300, track: "", status: "等待国内发货" }
+                ]
+            }
+        ];
+    }
 
-        // 根据不同状态渲染精细化的 Tailwind 彩色标签
-        let statusBadge = "";
-        switch (ord.status) {
-            case "等待国内发货":
-                statusBadge = `<span class="bg-amber-50 text-amber-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-amber-100">等待国内发货</span>`;
-                break;
-            case "集运仓已到货":
-                statusBadge = `<span class="bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-blue-100">集运仓已到货</span>`;
-                break;
-            case "跨境清关运输中":
-                statusBadge = `<span class="bg-indigo-50 text-indigo-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-indigo-100">跨境运输中</span>`;
-                break;
-            case "买家已完成收货":
-                statusBadge = `<span class="bg-emerald-50 text-emerald-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-emerald-100">已完成收货</span>`;
-                break;
-            default:
-                statusBadge = `<span class="bg-slate-50 text-slate-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold">${ord.status}</span>`;
-        }
+    window.ERP_STORE.orders.forEach((ord, orderIndex) => {
+        // 1. 动态拼装商品明细详情、物流单号及各自的状态标签
+        let itemsDetailHTML = "";
+        let totalCny = 0;
+
+        ord.items.forEach((item, itemIndex) => {
+            totalCny += item.cny;
+
+            // 针对单个商品的物流状态渲染精致的微型彩色标签
+            let itemStatusBadge = "";
+            switch (item.status) {
+                case "等待国内发货":
+                    itemStatusBadge = `<span class="bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-amber-100">🕒 待发货</span>`;
+                    break;
+                case "集运仓已到货":
+                    itemStatusBadge = `<span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-blue-100">📦 已到仓</span>`;
+                    break;
+                case "跨境清关运输中":
+                    itemStatusBadge = `<span class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-100">🚛 运输中</span>`;
+                    break;
+                case "买家已完成收货":
+                    itemStatusBadge = `<span class="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-emerald-100">✅ 已签收</span>`;
+                    break;
+            }
+
+            const trackStr = item.track ? `<span class="font-mono text-slate-700 bg-slate-100 px-1 rounded">${item.track}</span>` : `<span class="text-slate-300 italic">未发货</span>`;
+
+            // 每一个商品做成一个独立的细行，并附带极其方便的「快捷操作面板」
+            itemsDetailHTML += `
+                <div class="flex items-center justify-between py-1.5 border-b border-dashed border-slate-100 last:border-0 text-[11px]">
+                    <div class="flex items-center gap-2 flex-grow min-w-0 pr-2">
+                        <span class="text-slate-400 font-bold flex-shrink-0">[${item.platform}]</span>
+                        <span class="text-slate-800 font-semibold truncate" title="${item.name}">${item.name} (¥${item.cny})</span>
+                        ${itemStatusBadge}
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <div class="text-right">${trackStr}</div>
+                        <!-- ⚡ 外置快捷操作按钮组：点击直接改状态/填单号，无需进弹窗 -->
+                        <div class="flex gap-1">
+                            ${!item.track ? `
+                                <button onclick="quickAddTrack(${orderIndex}, ${itemIndex})" class="text-slate-500 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 p-1 rounded border border-slate-200 transition" title="快捷填单号">
+                                    <i class="fa-solid fa-truck"></i>
+                                </button>
+                            ` : ''}
+                            ${item.status === '等待国内发货' ? `
+                                <button onclick="quickMarkArrived(${orderIndex}, ${itemIndex})" class="text-amber-600 hover:text-white bg-amber-50 hover:bg-blue-600 p-1 rounded border border-amber-200 hover:border-blue-600 transition" title="一键确认到仓">
+                                    <i class="fa-solid fa-box"></i> 到仓
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        const buyerVnd = ord.buyer_vnd ? ord.buyer_vnd.toLocaleString() + " ₫" : "未计算";
 
         rowsHTML += `
-            <tr class="hover:bg-slate-50/80 transition text-xs font-semibold text-slate-600 border-b border-slate-100">
+            <tr class="hover:bg-slate-50/40 transition text-xs font-semibold text-slate-600 border-b border-slate-100">
                 <td class="p-4"><input type="checkbox" class="rounded border-slate-300"></td>
                 <td class="p-4 font-mono font-bold text-slate-900">${ord.id}</td>
                 <td class="p-4 text-slate-700">${ord.customer}</td>
-                <td class="p-4 text-slate-500 max-w-xs leading-relaxed">${productName}</td>
-                <td class="p-4 text-center">${statusBadge}</td>
-                <td class="p-4 text-right font-mono text-slate-400">¥${ord.cny ? ord.cny.toLocaleString() : '0'}</td>
-                <td class="p-4 text-center font-mono text-[11px] leading-relaxed text-slate-500">${trackNums}</td>
-                <td class="p-4 text-right font-mono text-indigo-600">${buyerVnd}</td>
+                <td class="p-4 max-w-md bg-slate-50/30 px-3 py-2 rounded-xl">${itemsDetailHTML}</td>
+                <td class="p-4 text-right font-mono text-slate-400">¥${totalCny.toLocaleString()}</td>
+                <td class="p-4 text-right font-mono text-indigo-600 font-black">${buyerVnd}</td>
                 <td class="p-4 text-center">
-                    <button onclick="openEditOrderModal(${index})" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition font-bold text-[11px]">
-                        <i class="fa-solid fa-pen-to-square"></i> 修改
+                    <button onclick="openEditOrderModal(${orderIndex})" class="text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition font-bold text-[11px] flex items-center gap-1 mx-auto">
+                        <i class="fa-solid fa-layer-group"></i> 完整管理
                     </button>
                 </td>
             </tr>
@@ -54,7 +102,7 @@ function renderOrders() {
                     <button class="border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-xl text-xs font-bold transition">批量导出对账单</button>
                 </div>
                 <div class="text-[11px] font-bold text-slate-400 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-xl border border-amber-100">
-                    💡 今日换算基准汇率：1 CNY = ${window.ERP_STORE.system_rate} VND (支持多状态跟踪及随时订单数据修改)
+                    💡 智能代购看板：支持单商品独立物流追踪。无需进弹窗，点击条目右侧 <i class="fa-solid fa-box text-amber-500"></i> 或 <i class="fa-solid fa-truck text-slate-400"></i> 即可快捷流转状态。
                 </div>
             </div>
 
@@ -66,10 +114,8 @@ function renderOrders() {
                             <th class="p-4 w-12"><input type="checkbox" class="rounded border-slate-300"></th>
                             <th class="p-4">订单号</th>
                             <th class="p-4">客户名</th>
-                            <th class="p-4">采购商品明细 (平台/名称)</th>
-                            <th class="p-4 text-center">当前状态</th>
+                            <th class="p-4">采购细项明细与商品独立状态 (平台 / 名字 / 快递 / 快捷操作)</th>
                             <th class="p-4 text-right">内部本金 (CNY)</th>
-                            <th class="p-4 text-center">国内发货物流单号</th>
                             <th class="p-4 text-right">收取买家费用 (VND)</th>
                             <th class="p-4 text-center rounded-r-xl">操作</th>
                         </tr>
@@ -85,84 +131,81 @@ function renderOrders() {
 
 function init_orders() {
     const btn = document.getElementById("btn-trigger-add-order");
-    if(btn) btn.addEventListener("click", () => openOrderFormModal(null)); // 传入 null 代表是全新创建
+    if(btn) btn.addEventListener("click", () => openOrderFormModal(null));
 }
 
-// 封装成统一的弹窗控制中心（支持新建与修改复用）
+// ⚡ 核心提效快捷功能1：在列表上一键修改状态为「集运仓已到货」
+window.quickMarkArrived = function(orderIndex, itemIndex) {
+    const item = window.ERP_STORE.orders[orderIndex].items[itemIndex];
+    item.status = "集运仓已到货";
+    
+    // 如果该商品还没填单号，为了流程规范，自动为其分配一个虚拟到仓签收标识
+    if (!item.track) {
+        item.track = "WH-ARRIVED-" + Math.floor(1000 + Math.random() * 9000);
+    }
+    
+    // 零延迟刷新局部表格视图
+    refreshOrdersView();
+};
+
+// ⚡ 核心提效快捷功能2：在列表上无需弹窗，直接输入或扫描填入快递单号
+window.quickAddTrack = function(orderIndex, itemIndex) {
+    const currentTrack = window.ERP_STORE.orders[orderIndex].items[itemIndex].track || "";
+    const newTrack = prompt("请输入或扫描国内电商卖家的发货物流单号：", currentTrack);
+    
+    if (newTrack !== null) {
+        window.ERP_STORE.orders[orderIndex].items[itemIndex].track = newTrack.trim();
+        // 如果填了单号，状态顺理成章转为等待国内发货或保持
+        refreshOrdersView();
+    }
+};
+
+// 辅助刷新当前视图的内部函数
+function refreshOrdersView() {
+    const mv = document.getElementById("main-view");
+    mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
+    init_orders();
+}
+
+// 统一的完整大表单配置模态框（支持新建和深度调整）
 function openOrderFormModal(editIndex = null) {
     const isEdit = editIndex !== null;
     const targetOrder = isEdit ? window.ERP_STORE.orders[editIndex] : null;
 
-    // 解析出可能已经存在的平台组合数据
+    // 构建商品多行表单
     let platformsHTML = "";
-    if (isEdit && targetOrder.desc) {
-        // 通过正则和切分将字符串 "[淘宝] 商品" 还原回输入框
-        const parts = targetOrder.desc.split(" + ");
-        parts.forEach(part => {
-            const match = part.match(/^\[(.*?)\]\s*(.*)$/);
-            const pName = match ? match[1] : "淘宝";
-            const iName = match ? match[2] : part;
-            // 估计估算每项本金，或者平摊（修改时可以二次校正）
-            const approxCny = Math.round(targetOrder.cny / parts.length); 
-
-            platformsHTML += createPlatformItemRow(pName, iName, approxCny);
+    if (isEdit && targetOrder.items) {
+        targetOrder.items.forEach((item, idx) => {
+            platformsHTML += createPlatformItemRow(item.platform, item.name, item.cny, item.track, item.status);
         });
     } else {
-        // 新建订单时的默认第一行
-        platformsHTML = createPlatformItemRow("淘宝", "", 0);
+        platformsHTML = createPlatformItemRow("淘宝", "", 0, "", "等待国内发货");
     }
-
-    // 解析可能已经存在的物流单号
-    let tracksHTML = "";
-    if (isEdit && targetOrder.tracks && targetOrder.tracks.length > 0) {
-        targetOrder.tracks.forEach(tr => {
-            tracksHTML += createTrackItemRow(tr);
-        });
-    } else {
-        tracksHTML = createTrackItemRow("");
-    }
-
-    // 默认选中的状态
-    const sWait = (!isEdit || targetOrder.status === "等待国内发货") ? "selected" : "";
-    const sArrive = (isEdit && targetOrder.status === "集运仓已到货") ? "selected" : "";
-    const sTransit = (isEdit && targetOrder.status === "跨境清关运输中") ? "selected" : "";
-    const sDone = (isEdit && targetOrder.status === "买家已完成收货") ? "selected" : "";
 
     const modalHTML = `
         <div id="order-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn overflow-y-auto py-8">
-            <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden border border-slate-100 my-auto">
+            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden border border-slate-100 my-auto">
                 <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 class="text-xs font-bold text-slate-800">${isEdit ? '修改/调整现有代购订单' : '新建中越代购订单 (多平台/多单号模式)'}</h3>
+                    <h3 class="text-xs font-bold text-slate-800">${isEdit ? '深度调整订单信息与全商品状态' : '新建中越多平台合并代购订单'}</h3>
                     <button onclick="closeOrderModal()" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
                 </div>
                 
                 <form id="add-order-form" class="p-6 space-y-4 text-xs">
-                    <!-- 1. 买家选择与状态流转 -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-slate-500 font-bold mb-1">选择越南买家</label>
-                            <select id="mo-customer" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-semibold focus:ring-1 focus:ring-indigo-500 focus:outline-none">
-                                <option value="Tran Thi Mai" ${isEdit && targetOrder.customer === 'Tran Thi Mai' ? 'selected' : ''}>Tran Thi Mai (梅姐姐)</option>
-                                <option value="Linh Long" ${isEdit && targetOrder.customer === 'Linh Long' ? 'selected' : ''}>Linh Long (阿龙)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-slate-500 font-bold mb-1">订单业务状态</label>
-                            <select id="mo-status" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-indigo-600 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
-                                <option value="等待国内发货" ${sWait}>🕒 等待国内发货</option>
-                                <option value="集运仓已到货" ${sArrive}>📦 集运仓已到货</option>
-                                <option value="跨境清关运输中" ${sTransit}>🚛 跨境清关运输中</option>
-                                <option value="买家已完成收货" ${sDone}>✅ 买家已完成收货</option>
-                            </select>
-                        </div>
+                    <!-- 客户选择 -->
+                    <div class="w-1/2">
+                        <label class="block text-slate-500 font-bold mb-1">选择越南买家</label>
+                        <select id="mo-customer" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-semibold focus:outline-none">
+                            <option value="Tran Thi Mai" ${isEdit && targetOrder.customer === 'Tran Thi Mai' ? 'selected' : ''}>Tran Thi Mai (梅姐姐)</option>
+                            <option value="Linh Long" ${isEdit && targetOrder.customer === 'Linh Long' ? 'selected' : ''}>Linh Long (阿龙)</option>
+                        </select>
                     </div>
 
-                    <!-- 2. 多平台采购商品明细区域 -->
+                    <!-- 商品明细大列表：每个商品彻底独立拥有物流、单号、状态 -->
                     <div>
                         <div class="flex justify-between items-center mb-1">
-                            <label class="block text-slate-500 font-bold">采购商品与本金明细 (买家弃单可点右侧垃圾桶删除该项)</label>
+                            <label class="block text-slate-500 font-bold">采购商品明细控制台 (支持各商品不同物流节点、随时剔除弃单商品)</label>
                             <button type="button" id="btn-add-platform" class="text-indigo-600 hover:text-indigo-700 font-bold text-[11px] flex items-center gap-1">
-                                <i class="fa-solid fa-plus-circle"></i> 增加一个平台
+                                <i class="fa-solid fa-plus-circle"></i> 增加一件商品
                             </button>
                         </div>
                         <div id="platform-items-container" class="space-y-2">
@@ -170,38 +213,25 @@ function openOrderFormModal(editIndex = null) {
                         </div>
                     </div>
 
-                    <!-- 3. 收取买家费用（直接输入一口价越南盾） -->
-                    <div class="bg-indigo-50/40 p-4 rounded-xl border border-indigo-100/50 space-y-3">
+                    <!-- 结算一口价 -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-slate-600 font-bold mb-1">内部总本金估算</label>
-                                <div id="mo-total-cny-display" class="font-mono font-black text-slate-700 text-sm py-1.5 px-1">¥ 0</div>
+                                <label class="block text-slate-500 font-bold mb-1">内部总本金估算</label>
+                                <div id="mo-total-cny-display" class="font-mono font-black text-slate-700 text-sm py-1">¥ 0</div>
                             </div>
                             <div>
-                                <label class="block text-indigo-900 font-bold mb-1">收取买家的商品费用 (VND)</label>
-                                <input type="number" id="mo-buyer-vnd" value="${isEdit ? targetOrder.buyer_vnd : ''}" placeholder="直接输入收取的越南盾金额" required class="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-mono font-black text-right text-indigo-600 focus:outline-none">
+                                <label class="block text-indigo-900 font-bold mb-1">收取买家的固定货款 (VND)</label>
+                                <input type="number" id="mo-buyer-vnd" value="${isEdit ? targetOrder.buyer_vnd : ''}" placeholder="输入最终收取的越南盾" required class="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-mono font-black text-right text-indigo-600 focus:outline-none">
                             </div>
                         </div>
                     </div>
 
-                    <!-- 4. 多物流单号追踪区域 -->
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="block text-slate-500 font-bold">国内发货物流单号 (卖家多次发货可在此处追增)</label>
-                            <button type="button" id="btn-add-track" class="text-slate-600 hover:text-slate-800 font-bold text-[11px] flex items-center gap-1">
-                                <i class="fa-solid fa-circle-plus"></i> 增加物流单号
-                            </button>
-                        </div>
-                        <div id="track-items-container" class="space-y-1.5">
-                            ${tracksHTML}
-                        </div>
-                    </div>
-
-                    <!-- 5. 提交区 -->
+                    <!-- 按钮 -->
                     <div class="flex gap-3 pt-2">
-                        <button type="button" onclick="closeOrderModal()" class="w-1/3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 py-2.5 rounded-xl font-bold transition">取消</button>
+                        <button type="button" onclick="closeOrderModal()" class="w-1/4 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 rounded-xl font-bold transition">取消</button>
                         <button type="submit" class="flex-grow bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl font-bold shadow-sm transition">
-                            ${isEdit ? '保存修改内容' : '确认创建订单'}
+                            ${isEdit ? '保存全部变动' : '生成全新多单号订单'}
                         </button>
                     </div>
                 </form>
@@ -212,99 +242,79 @@ function openOrderFormModal(editIndex = null) {
     setupModalCalculation(editIndex);
 }
 
-// 助手函数：构建商品行 HTML
-function createPlatformItemRow(platform, name, cny) {
-    const options = ["淘宝", "1688", "拼多多", "咸鱼", "其他"].map(p => 
+// 商品行结构组件，将单号与状态直接收纳进每一条商品里
+function createPlatformItemRow(platform, name, cny, track, status) {
+    const pOpts = ["淘宝", "1688", "拼多多", "咸鱼", "其他"].map(p => 
         `<option value="${p}" ${platform === p ? 'selected' : ''}>${p}</option>`
     ).join("");
 
+    const sOpts = [
+        { v: "等待国内发货", t: "🕒 待发货" },
+        { v: "集运仓已到货", t: "📦 已到仓" },
+        { v: "跨境清关运输中", t: "🚛 运输中" },
+        { v: "买家已完成收货", t: "✅ 已签收" }
+    ].map(s => `<option value="${s.v}" ${status === s.v ? 'selected' : ''}>${s.t}</option>`).join("");
+
     return `
-        <div class="platform-item flex gap-2 items-center bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-            <select class="mo-item-platform bg-white border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 w-24">
-                ${options}
-            </select>
-            <input type="text" placeholder="输入商品名字" value="${name}" required class="mo-item-name flex-grow bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-medium">
-            <div class="w-24 relative">
-                <span class="absolute left-2 top-1.5 text-slate-400 font-mono">¥</span>
-                <input type="number" placeholder="本金" value="${cny || ''}" required class="mo-item-cny w-full bg-white border border-slate-200 rounded-lg pl-5 pr-2 py-1.5 text-right font-mono font-bold text-slate-700">
+        <div class="platform-item grid grid-cols-12 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200/60 items-center">
+            <div class="col-span-2">
+                <select class="mo-item-platform w-full bg-white border border-slate-200 rounded-lg px-1.5 py-1.5 font-bold text-slate-700">
+                    ${pOpts}
+                </select>
             </div>
-            <button type="button" onclick="removePlatformItem(this)" class="text-rose-400 hover:text-rose-600 px-1 text-sm"><i class="fa-regular fa-trash-can"></i></button>
+            <div class="col-span-3">
+                <input type="text" placeholder="商品名称" value="${name}" required class="mo-item-name w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 font-medium">
+            </div>
+            <div class="col-span-2 relative">
+                <span class="absolute left-2 top-1.5 text-slate-400 font-mono">¥</span>
+                <input type="number" placeholder="本金" value="${cny || ''}" required class="mo-item-cny w-full bg-white border border-slate-200 rounded-lg pl-4 pr-1.5 py-1.5 text-right font-mono font-bold text-slate-700">
+            </div>
+            <div class="col-span-3">
+                <input type="text" placeholder="国内快递单号(选填)" value="${track || ''}" class="mo-item-track w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 font-mono text-[11px]">
+            </div>
+            <div class="col-span-1.5 col-start-11 flex gap-1 items-center justify-end">
+                <select class="mo-item-status bg-white border border-slate-200 rounded-lg px-1 py-1.5 font-bold text-[11px] text-slate-600">
+                    ${sOpts}
+                </select>
+                <button type="button" onclick="removePlatformItem(this)" class="text-rose-400 hover:text-rose-600 p-1 text-sm"><i class="fa-regular fa-trash-can"></i></button>
+            </div>
         </div>
     `;
 }
 
-// 助手函数：构建物流单号行 HTML
-function createTrackItemRow(trackVal) {
-    return `
-        <div class="track-item flex gap-2 items-center">
-            <input type="text" placeholder="输入国内快递单号 (选填)" value="${trackVal}" class="mo-track-input flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-mono">
-            <button type="button" onclick="removeTrackItem(this)" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-minus"></i></button>
-        </div>
-    `;
-}
-
-// 供主干触发调用的包装方法
 function openAddOrderModal() { openOrderFormModal(null); }
 function openEditOrderModal(index) { openOrderFormModal(index); }
 
-// 动态增删商品明细
 window.removePlatformItem = function(btn) {
     const container = document.getElementById("platform-items-container");
     if(container.children.length > 1) {
         btn.closest('.platform-item').remove();
         window.updateTotalCnySum();
     } else {
-        alert("至少需要保留一个商品项目。如果是买家整单全部不想要了，建议将整单状态修改为【已完成/取消】。");
-    }
-};
-
-window.removeTrackItem = function(btn) {
-    const container = document.getElementById("track-items-container");
-    if(container.children.length > 1) {
-        btn.closest('.track-item').remove();
-    } else {
-        // 允许清空单号输入框
-        btn.closest('.track-item').querySelector('.mo-track-input').value = "";
+        alert("至少需要保留一个商品项目。");
     }
 };
 
 window.updateTotalCnySum = function() {
-    const cnyInputs = document.querySelectorAll(".mo-item-cny");
     let totalCny = 0;
-    cnyInputs.forEach(input => {
+    document.querySelectorAll(".mo-item-cny").forEach(input => {
         totalCny += parseFloat(input.value) || 0;
     });
-    
-    const displayBox = document.getElementById("mo-total-cny-display");
-    if(displayBox) displayBox.innerText = "¥ " + totalCny.toLocaleString();
-
-    const buyerVndInput = document.getElementById("mo-buyer-vnd");
-    if(buyerVndInput && buyerVndInput.value === "") {
-        const baseVnd = totalCny * window.ERP_STORE.system_rate;
-        buyerVndInput.placeholder = "保本参考: " + Math.round(baseVnd).toLocaleString() + " ₫";
-    }
+    const db = document.getElementById("mo-total-cny-display");
+    if(db) db.innerText = "¥ " + totalCny.toLocaleString();
 };
 
 function setupModalCalculation(editIndex) {
-    const containerPlatform = document.getElementById("platform-items-container");
-    const containerTrack = document.getElementById("track-items-container");
+    const container = document.getElementById("platform-items-container");
     
-    // 增加平台按钮
     document.getElementById("btn-add-platform").addEventListener("click", () => {
-        const rowHTML = createPlatformItemRow("淘宝", "", 0);
-        containerPlatform.insertAdjacentHTML('beforeend', rowHTML);
+        const row = createPlatformItemRow("淘宝", "", 0, "", "等待国内发货");
+        container.insertAdjacentHTML('beforeend', row);
         bindCnyInputListener();
     });
 
-    // 增加单号
-    document.getElementById("btn-add-track").addEventListener("click", () => {
-        const rowHTML = createTrackItemRow("");
-        containerTrack.insertAdjacentHTML('beforeend', rowHTML);
-    });
-
     function bindCnyInputListener() {
-        const cnyInputs = document.querySelectorAll(".mo-item-cny");
-        cnyInputs.forEach(input => {
+        document.querySelectorAll(".mo-item-cny").forEach(input => {
             input.removeEventListener("input", window.updateTotalCnySum);
             input.addEventListener("input", window.updateTotalCnySum);
         });
@@ -312,59 +322,39 @@ function setupModalCalculation(editIndex) {
     bindCnyInputListener();
     window.updateTotalCnySum();
 
-    // 表单提交（兼容保存和新建）
     document.getElementById("add-order-form").addEventListener("submit", (e) => {
         e.preventDefault();
         
-        let descParts = [];
-        let totalCnySum = 0;
-        document.querySelectorAll(".platform-item").forEach(item => {
-            const platform = item.querySelector(".mo-item-platform").value;
-            const name = item.querySelector(".mo-item-name").value;
-            const cny = parseFloat(item.querySelector(".mo-item-cny").value) || 0;
-            
-            descParts.push(`[${platform}] ${name}`);
-            totalCnySum += cny;
+        // 搜集精细化商品级结构
+        let itemsList = [];
+        document.querySelectorAll(".platform-item").forEach(el => {
+            itemsList.push({
+                platform: el.querySelector(".mo-item-platform").value,
+                name: el.querySelector(".mo-item-name").value,
+                cny: parseFloat(el.querySelector(".mo-item-cny").value) || 0,
+                track: el.querySelector(".mo-item-track").value.trim(),
+                status: el.querySelector(".mo-item-status").value
+            });
         });
 
-        let tracksList = [];
-        document.querySelectorAll(".mo-track-input").forEach(input => {
-            if(input.value.trim() !== "") {
-                tracksList.push(input.value.trim());
-            }
-        });
-
-        const statusValue = document.getElementById("mo-status").value;
-        const customerValue = document.getElementById("mo-customer").value;
-        const buyerVndValue = parseFloat(document.getElementById("mo-buyer-vnd").value) || 0;
+        const cust = document.getElementById("mo-customer").value;
+        const vnd = parseFloat(document.getElementById("mo-buyer-vnd").value) || 0;
 
         if (editIndex !== null) {
-            // 【修改模式】：直接覆盖旧有索引位置的数据
-            window.ERP_STORE.orders[editIndex].customer = customerValue;
-            window.ERP_STORE.orders[editIndex].desc = descParts.join(" + ");
-            window.ERP_STORE.orders[editIndex].status = statusValue;
-            window.ERP_STORE.orders[editIndex].cny = totalCnySum;
-            window.ERP_STORE.orders[editIndex].buyer_vnd = buyerVndValue;
-            window.ERP_STORE.orders[editIndex].tracks = tracksList;
+            window.ERP_STORE.orders[editIndex].customer = cust;
+            window.ERP_STORE.orders[editIndex].buyer_vnd = vnd;
+            window.ERP_STORE.orders[editIndex].items = itemsList;
         } else {
-            // 【新建模式】：插入一条全新带有随机单号的数据
             const newId = "#ORD-" + Math.floor(10000 + Math.random() * 90000);
             window.ERP_STORE.orders.unshift({
                 id: newId,
-                customer: customerValue,
-                desc: descParts.join(" + "),
-                status: statusValue,
-                cny: totalCnySum,
-                buyer_vnd: buyerVndValue,
-                tracks: tracksList,
-                vtrack: "凭祥跨境仓"
+                customer: cust,
+                buyer_vnd: vnd,
+                items: itemsList
             });
         }
 
-        // 刷新视图并关闭弹窗
-        const mv = document.getElementById("main-view");
-        mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
-        init_orders(); 
+        refreshOrdersView();
         closeOrderModal();
     });
 }
