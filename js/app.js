@@ -2,7 +2,24 @@
 window.ERP_STORE = {
     system_rate: 3450, 
     currency_fee: 5,   
-    filter_status: null, // ⚡ 核心追加：用于存储首页卡片点击后传递的过滤状态
+    filter_status: null, 
+    // ⚡ 核心追加：全局客户档案数据集
+    customers: [
+        {
+            id: "CUST-1001",
+            name: "Tran Thi Mai (梅姐姐)",
+            social: "Zalo: 0912345678",
+            phone: "0912345678",
+            address: "Số 15, Ngõ 20, Đường Mỹ Đình, Quận Nam Từ Liêm, Hà Nội"
+        },
+        {
+            id: "CUST-1002",
+            name: "Linh Long (阿龙)",
+            social: "微信: linhlong_vn",
+            phone: "0988776655",
+            address: "123 Đường Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh"
+        }
+    ],
     orders: [
         {
             id: "#ORD-78901",
@@ -19,15 +36,6 @@ window.ERP_STORE = {
             items: [
                 { platform: "1688", name: "跨境数码配件大宗采购", cny: 400, track: "ZT9988112233", status: "跨境清关运输中" }
             ]
-        },
-        {
-            id: "#ORD-78903",
-            customer: "Tran Thi Mai (梅姐姐)",
-            buyer_vnd: 2800000,
-            items: [
-                { platform: "拼多多", name: "加厚马丁靴", cny: 500, track: "", status: "等待国内发货" },
-                { platform: "淘宝", name: "工装休闲裤", cny: 250, track: "YTO7788990", status: "集运仓已到货" }
-            ]
         }
     ]
 };
@@ -40,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const routes = {
         dashboard: { title: "仪表盘 Dashboard", render: renderDashboard, init: init_dashboard },
         orders: { title: "订单管理 (CN ➔ VN)", render: renderOrders, init: init_orders },
-        customers: { title: "中越客户管理 Customer Mgmt", render: renderCustomers, init: null },
+        customers: { title: "中越客户管理 Customer Mgmt", render: renderCustomers, init: init_customers }, // ⚡ 激活 init
         warehouse: { title: "包裹/跨境集运仓 Warehouse", render: renderWarehouse, init: init_warehouse },
         finance: { title: "财务管理 Finance Center", render: renderFinance, init: null },
         system: { title: "核心系统设置 Settings", render: renderSystem, init: init_system }
@@ -70,7 +78,6 @@ document.addEventListener("DOMContentLoaded", () => {
     menuItems.forEach(item => {
         item.addEventListener("click", (e) => {
             e.preventDefault();
-            // 每次手动切换侧边栏菜单时，清空首页传过来的联动过滤状态
             if (item.getAttribute("data-target") === "orders") {
                 window.ERP_STORE.filter_status = null;
             }
