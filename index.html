@@ -4,18 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>中越通跨境代购 ERP 运营系统</title>
-    <!-- Tailwind CSS 核心 CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
-    <!-- FontAwesome 全局图标库 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans flex h-screen overflow-hidden">
 
-    <!-- 左侧固定侧边导航栏 -->
     <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between shadow-xl z-10 flex-shrink-0">
         <div>
-            <!-- LOGO 区域 -->
             <div class="p-5 flex items-center gap-3 border-b border-slate-800">
                 <div class="bg-gradient-to-br from-red-600 to-amber-500 text-white p-2 rounded-xl font-black tracking-wider text-xs shadow-md">
                     CN 🇻🇳 VN
@@ -28,7 +24,6 @@
                 </div>
             </div>
             
-            <!-- 导航菜单 -->
             <nav class="p-4 space-y-1" id="sidebar-menu">
                 <a href="#dashboard" data-target="dashboard" class="menu-item active flex items-center gap-3 px-4 py-3 rounded-xl transition text-xs font-semibold">
                     <i class="fa-solid fa-chart-pie w-5 text-sm"></i> 仪表盘 Dashboard
@@ -51,20 +46,9 @@
             </nav>
         </div>
         
-        <!-- 侧边栏底部：动态汇率看板 -->
-        <div class="p-4 m-4 bg-slate-800/50 rounded-xl border border-slate-700/30">
-            <div class="flex justify-between items-center text-[10px] text-slate-400 mb-1">
-                <span>今日系统换算汇率</span>
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            </div>
-            <div class="text-white font-mono font-black text-sm" id="sidebar-rate-display">1 CNY = 3,450 VND</div>
-            <div class="text-[9px] text-slate-500 mt-0.5">更新于: 2026-05-16</div>
-        </div>
-    </aside>
+        </aside>
 
-    <!-- 右侧主视图承载区 -->
     <div class="flex-grow flex flex-col min-w-0 overflow-hidden">
-        <!-- 顶部全局工具栏 -->
         <header class="bg-white h-16 border-b border-slate-200 flex items-center justify-between px-8 shadow-sm flex-shrink-0">
             <div class="flex items-center gap-4">
                 <span id="page-title" class="text-base font-bold text-slate-800">仪表盘 Dashboard</span>
@@ -85,23 +69,19 @@
             </div>
         </header>
 
-        <!-- 动态视图渲染容器 -->
         <main class="flex-grow p-8 overflow-y-auto" id="main-view">
-            <!-- 初始加载动画 -->
             <div class="flex items-center justify-center h-full">
                 <i class="fa-solid fa-circle-notch animate-spin text-xl text-indigo-600"></i>
             </div>
         </main>
     </div>
 
-    <!-- 依次载入各功能模块的数据与视图渲染逻辑脚本 -->
     <script src="js/dashboard.js"></script>
     <script src="js/orders.js"></script>
     <script src="js/customers.js"></script>
     <script src="js/warehouse.js"></script>
     <script src="js/finance.js"></script>
     <script src="js/system.js"></script>
-    <!-- 核心全局调度中心 -->
     <script src="js/app.js"></script>
 </body>
 </html>
