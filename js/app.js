@@ -1,13 +1,33 @@
-// 全局状态管理中心，供各个模块读取
+// 全局状态管理中心 - 已全面升级为条目级（items）多商品商品结构
 window.ERP_STORE = {
     system_rate: 3450, // 初始系统默认汇率 1 CNY = 3450 VND
     currency_fee: 5,   // 默认代购手续费 5%
     orders: [
-        { id: "#ORD-78901", customer: "Tran Thi Mai", desc: "淘宝代购（美妆/服饰）", status: "已国内签收", cny: 1250, vtrack: "广州仓 ➔ 凭祥" },
-        { id: "#ORD-78902", customer: "Tran Thi Mai", desc: "淘宝代购（美妆/服饰）", status: "已国内签收", cny: 1250, vtrack: "广州仓 ➔ 凭祥" },
-        { id: "#ORD-78903", customer: "Tran Thi Mai", desc: "淘宝代购（美妆/服饰）", status: "已国内签收", cny: 1250, vtrack: "广州仓 ➔ 凭祥" },
-        { id: "#ORD-78904", customer: "Tran Thi Mai", desc: "淘宝代购（美妆/服饰）", status: "已国内签收", cny: 1250, vtrack: "广州仓 ➔ 凭祥" },
-        { id: "#ORD-78905", customer: "Tran Thi Mai", desc: "淘宝代购（美妆/服饰）", status: "已国内签收", cny: 1250, vtrack: "广州仓 ➔ 凭祥" }
+        {
+            id: "#ORD-78901",
+            customer: "Tran Thi Mai (梅姐姐)",
+            buyer_vnd: 4528125,
+            items: [
+                { platform: "淘宝", name: "潮流防晒衣 (亮黑色 M码)", cny: 1250, track: "SF142345566", status: "集运仓已到货" }
+            ]
+        },
+        {
+            id: "#ORD-78902",
+            customer: "Linh Long (阿龙)",
+            buyer_vnd: 1550000,
+            items: [
+                { platform: "1688", name: "跨境数码配件大宗采购", cny: 400, track: "ZT9988112233", status: "跨境清关运输中" }
+            ]
+        },
+        {
+            id: "#ORD-78903",
+            customer: "Tran Thi Mai (梅姐姐)",
+            buyer_vnd: 2800000,
+            items: [
+                { platform: "拼多多", name: "加厚马丁靴", cny: 500, track: "", status: "等待国内发货" },
+                { platform: "淘宝", name: "工装休闲裤", cny: 250, track: "YTO7788990", status: "集运仓已到货" }
+            ]
+        }
     ]
 };
 
