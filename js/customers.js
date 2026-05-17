@@ -3,7 +3,7 @@ function renderCustomers() {
     let cardsHTML = "";
 
     window.ERP_STORE.customers.forEach((cust, index) => {
-        // 📱 H5 核心：重组为极简流畅的联系人名片流
+        // 📱 H5 核心：彻底重组为手机大字版的独立联系人名片流
         cardsHTML += `
             <div class="cust-row bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-4 animate-fadeIn"
                 data-search-name="${cust.name.toLowerCase()}"
@@ -15,7 +15,7 @@ function renderCustomers() {
                         <h4 class="text-sm font-black text-slate-900">${cust.name}</h4>
                         <span class="text-[11px] text-slate-400 font-mono mt-0.5 block">${cust.id}</span>
                     </div>
-                    <button onclick="deleteCustomerProfile(${index})" class="text-rose-400 p-1 text-base" title="删除档案">
+                    <button onclick="deleteCustomerProfile(${index})" class="text-rose-400 p-1 text-base animate-pulse" title="删除档案">
                         <i class="fa-regular fa-trash-can"></i>
                     </button>
                 </div>
@@ -36,7 +36,7 @@ function renderCustomers() {
                 </div>
 
                 <div class="pt-1">
-                    <button onclick="copyCustomerShippingText(${index})" class="w-full bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-xs border border-indigo-100/70 active:bg-indigo-600 active:text-white transition-all flex items-center justify-center gap-1.5">
+                    <button onclick="copyCustomerShippingText(${index})" class="w-full bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-xs border border-indigo-100/70 active:bg-indigo-600 active:text-white transition-all flex items-center justify-center gap-1.5 shadow-sm">
                         <i class="fa-regular fa-copy text-sm"></i> ${isZh ? '一键复制完整寄件打单文本' : 'Copy địa chỉ gửi hàng'}
                     </button>
                 </div>
@@ -45,13 +45,13 @@ function renderCustomers() {
     });
 
     if (cardsHTML === "") {
-        cardsHTML = `<div class="bg-white p-12 rounded-2xl border border-slate-100 text-center italic text-slate-400 text-xs">${isZh?'暂无买家数据档案':'Chưa có dữ liệu'}</div>`;
+        cardsHTML = `<div class="bg-white p-12 rounded-2xl border border-slate-100 text-center italic text-slate-400 text-xs">${isZh?'暂无买家数据档案，请点击创建':'Chưa có dữ liệu'}</div>`;
     }
 
     return `
         <div class="space-y-4 w-full max-w-md mx-auto">
             <div class="flex flex-col gap-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-                <button id="btn-trigger-add-cust" class="w-full bg-indigo-600 text-white py-3 rounded-2xl text-xs font-black shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all">
+                <button id="btn-trigger-add-customer" class="w-full bg-indigo-600 text-white py-3 rounded-2xl text-xs font-black shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all">
                     <i class="fa-solid fa-user-plus"></i> ${isZh?'创建新买家档案':'Thêm khách hàng'}
                 </button>
                 <div class="relative w-full">
@@ -67,11 +67,12 @@ function renderCustomers() {
     `;
 }
 
+// ⚡ 核心修复：精准对接给 app.js 调用的子硬件生命周期钩子，实现事件总线完全体
 window.init_customers = function() {
-    const btn = document.getElementById("btn-trigger-add-cust");
+    const btn = document.getElementById("btn-trigger-add-customer");
     if(btn) {
-        btn.removeEventListener("click", openAddCustomerModal);
-        btn.addEventListener("click", openAddCustomerModal);
+        btn.removeEventListener("click", openAddCustomerModalDirectly);
+        btn.addEventListener("click", openAddCustomerModalDirectly);
     }
 
     const searchIn = document.getElementById("cust-search-input");
@@ -89,7 +90,11 @@ window.init_customers = function() {
     }
 };
 
-function openAddCustomerModal() {
+function openAddCustomerModalDirectly() {
+    openCustomerFormModal();
+}
+
+function openCustomerFormModal() {
     const isZh = window.ERP_STORE.current_lang === "zh";
     const modalHTML = `
         <div id="cust-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
@@ -102,21 +107,21 @@ function openAddCustomerModal() {
                 <form id="add-cust-form" class="p-5 space-y-4 text-xs">
                     <div>
                         <label class="block text-slate-400 font-bold mb-1">${isZh?'买家姓名/微信昵称 (必填)':'Tên khách hàng (Bắt buộc)'}</label>
-                        <input type="text" id="mo-cust-name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold focus:outline-none text-slate-800">
+                        <input type="text" id="mo-cust-name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold focus:outline-none text-slate-800 text-sm">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-slate-400 font-bold mb-1">${isZh?'社交号':'Mạng XH'}</label>
-                            <input type="text" id="mo-cust-social" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none text-slate-800">
+                            <input type="text" id="mo-cust-social" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none text-slate-800 text-sm">
                         </div>
                         <div>
                             <label class="block text-slate-400 font-bold mb-1">${isZh?'越南电话 (必填)':'Số điện thoại VN'}</label>
-                            <input type="text" id="mo-cust-phone" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-mono focus:outline-none text-slate-800">
+                            <input type="text" id="mo-cust-phone" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-mono focus:outline-none text-slate-800 text-sm">
                         </div>
                     </div>
                     <div>
                         <label class="block text-slate-400 font-bold mb-1">${isZh?'越南本土完整收货地址':'Địa chỉ nhận hàng tại VN'}</label>
-                        <textarea id="mo-cust-address" rows="3" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:outline-none font-bold text-slate-700"></textarea>
+                        <textarea id="mo-cust-address" rows="3" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none font-bold text-slate-700 text-sm"></textarea>
                     </div>
                     <div class="flex gap-3 pt-2">
                         <button type="button" onclick="closeCustModal()" class="w-1/4 bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold">${isZh?'取消':'Hủy'}</button>
@@ -127,7 +132,7 @@ function openAddCustomerModal() {
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    window.pushModalHistoryState("cust-modal"); 
+    window.pushModalHistoryState("cust-modal"); // ⚡ 激活手机物理返回键拦截机制
     
     document.getElementById("add-cust-form").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -149,7 +154,7 @@ function openAddCustomerModal() {
             window.ERP_STORE.customers.push(payload);
             closeCustModal();
             refreshCustomersView();
-        } else alert("写入 D1 失败");
+        } else alert("写入 D1 数据库失败，请检查网络");
     });
 }
 
@@ -183,6 +188,6 @@ window.copyCustomerShippingText = function(index) {
     const cust = window.ERP_STORE.customers[index];
     const textToCopy = `Người nhận: ${cust.name}\nSĐT: ${cust.phone}\nĐịa chỉ: ${cust.address}`;
     navigator.clipboard.writeText(textToCopy).then(() => {
-        alert(window.ERP_STORE.current_lang === 'zh' ? `🎉 寄件打单文本已复制！` : `🎉 Đã copy thông tin vận đơn!`);
+        alert(window.ERP_STORE.current_lang === 'zh' ? `🎉 寄件打单文本已成功复制到剪贴板！` : `🎉 Đã copy thông tin vận đơn!`);
     });
 };
