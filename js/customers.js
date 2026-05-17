@@ -1,5 +1,5 @@
 // ==========================================
-// 👥 中越通跨境代购 ERP - 客户管理模块 (完全体)
+// 👥 中越通跨境代购 ERP - 客户管理模块 (终极修复版)
 // ==========================================
 
 function renderCustomers() {
@@ -7,7 +7,11 @@ function renderCustomers() {
     let cardsHTML = "";
 
     window.ERP_STORE.customers.forEach((cust, index) => {
-        // 📱 H5 核心：点击整张卡片的非按钮区域，直接触发深度编辑修改
+        // 🧼 强力清洗历史遗留的重复 ID 错乱（防止出现 CUST-CUST-1001）
+        if (cust.id && cust.id.startsWith("CUST-CUST-")) {
+            cust.id = cust.id.replace("CUST-CUST-", "CUST-");
+        }
+
         cardsHTML += `
             <div class="cust-row bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-4 animate-fadeIn cursor-pointer active:bg-slate-50/50 transition-all"
                 data-search-name="${cust.name.toLowerCase()}"
@@ -62,7 +66,6 @@ function renderCustomers() {
                     <input type="text" id="cust-search-input" placeholder="${isZh?'搜索姓名、电话、唯一ID...':'Tìm tên, mã, số điện thoại...'}" class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-9 pr-4 py-2.5 text-xs focus:outline-none font-bold text-slate-800">
                 </div>
             </div>
-
             <div class="space-y-4 pb-12" id="cust-cards-container">
                 ${cardsHTML}
             </div>
@@ -89,20 +92,15 @@ window.init_customers = function() {
     }
 };
 
-// 拦截点击事件，防止点“复制”时触发弹窗修改
 window.handleCustomerCardClick = function(event, index) {
     if (event.target.closest('button')) return;
     openCustomerFormModal(index);
 };
 
-// ==========================================
-// 🔄 核心融合：一个弹窗，兼顾新建与深度修改
-// ==========================================
 window.openCustomerFormModal = function(editIndex = null) {
     const isEdit = editIndex !== null;
     const isZh = window.ERP_STORE.current_lang === "zh";
     
-    // 如果是修改状态，提取出老数据填入输入框
     const targetCust = isEdit ? window.ERP_STORE.customers[editIndex] : { name: "", social: "", phone: "", address: "", id: "" };
 
     const modalHTML = `
@@ -156,9 +154,6 @@ window.openCustomerFormModal = function(editIndex = null) {
     window.pushModalHistoryState("cust-modal"); 
 };
 
-// ==========================================
-// 💾 数据吞吐：统一处理新建或修改保存
-// ==========================================
 window.submitCustomerFormAction = async function(editIndex) {
     const isEdit = editIndex !== null;
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -174,37 +169,42 @@ window.submitCustomerFormAction = async function(editIndex) {
     }
 
     let targetId = "";
-    let apiPath = `${window.API_BASE_URL}/api/customers/add`;
-    let reqMethod = "POST";
-
     if (isEdit) {
-        // 修改模式：锁死原有的唯一 ID，改用 PUT 请求全量覆写
         targetId = window.ERP_STORE.customers[editIndex].id;
-        apiPath = `${window.API_BASE_URL}/api/customers/add`; // 沿用 workers 的 INSERT OR REPLACE 覆盖接口
+        // 🧼 核心清洗防御：发送请求前，如果发现带有重复前缀，强行剔除干净
+        if (targetId.startsWith("CUST-CUST-")) {
+            targetId = targetId.replace("CUST-CUST-", "CUST-");
+        }
     } else {
-        // 新建模式：自动累加生成全新 ID
         targetId = `CUST-${1001 + window.ERP_STORE.customers.length}`;
     }
 
     const payload = { id: targetId, name, social, phone, address };
 
-    const res = await fetch(apiPath, {
-        method: reqMethod,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    });
+    // 💡 路由防御：确保与后端 Workers 定义的客户插入/覆写接口完全一致
+    const apiPath = `${window.API_BASE_URL}/api/customers/add`;
 
-    if(res.ok) {
-        if (isEdit) {
-            window.ERP_STORE.customers[editIndex] = payload;
+    try {
+        const res = await fetch(apiPath, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if(res.ok) {
+            if (isEdit) {
+                window.ERP_STORE.customers[editIndex] = payload;
+            } else {
+                window.ERP_STORE.customers.push(payload);
+            }
+            closeCustModal();
+            refreshCustomersView();
+            alert(isZh ? "🎉 资料已成功实时云同步！" : "🎉 Cập nhật thành công!");
         } else {
-            window.ERP_STORE.customers.push(payload);
+            alert(`D1 Link Error: ${res.status}`);
         }
-        closeCustModal();
-        refreshCustomersView();
-        alert(isZh ? "🎉 资料已成功实时云同步！" : "🎉 Cập nhật thành công!");
-    } else {
-        alert("D1 Link Error");
+    } catch (err) {
+        alert("网络连接失败，请检查 API 配置");
     }
 };
 
@@ -224,12 +224,13 @@ function refreshCustomersView() {
 window.deleteCustomerProfileFromForm = async function(index) {
     const cust = window.ERP_STORE.customers[index];
     const isZh = window.ERP_STORE.current_lang === "zh";
+    let targetId = cust.id.startsWith("CUST-CUST-") ? cust.id.replace("CUST-CUST-", "CUST-") : cust.id;
     
     if(confirm(isZh ? `🚨 确定要永久删除客户【${cust.name}】的全部档案吗？` : `Xóa khách hàng ${cust.name}?`)) {
         const res = await fetch(`${window.API_BASE_URL}/api/customers/delete`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: cust.id })
+            body: JSON.stringify({ id: targetId })
         });
         if(res.ok) {
             window.ERP_STORE.customers.splice(index, 1);
@@ -240,7 +241,7 @@ window.deleteCustomerProfileFromForm = async function(index) {
 };
 
 window.copyCustomerShippingText = function(event, index) {
-    event.stopPropagation(); // 强行拦截事件冒泡，防止复制时弹出修改面板
+    event.stopPropagation();
     const cust = window.ERP_STORE.customers[index];
     const textToCopy = `Người nhận: ${cust.name}\nSĐT: ${cust.phone}\nĐịa chỉ: ${cust.address}`;
     navigator.clipboard.writeText(textToCopy).then(() => {
