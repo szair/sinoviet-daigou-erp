@@ -231,4 +231,141 @@ function openOrderFormModal(editIndex = null) {
                         </div>
                         <div>
                             <label class="block text-indigo-950 font-bold mb-1">${isZh?'收取买家货款 (VND)':'Số tiền thu khách (VND)'}</label>
-                            <input type="number" id="mo-buyer-vnd" value="${isEdit ? targetOrder.buyer_vnd : ''}" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2
+                            <input type="number" id="mo-buyer-vnd" value="${isEdit ? targetOrder.buyer_vnd : ''}" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 font-mono font-black text-right text-indigo-600 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="closeOrderModal()" class="w-1/4 bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold">${isZh?'取消':'Hủy'}</button>
+                        <button type="submit" class="flex-grow bg-indigo-600 text-white py-3 rounded-2xl font-black shadow-md">${isZh?'确认保存':'Lưu lại'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    window.pushModalHistoryState("order-modal"); 
+    setupModalCalculation(editIndex);
+}
+
+function createPlatformItemRow(platform, name, cny, track, status, expressCompany = "中通") {
+    const pOpts = ["淘宝", "1688", "拼多多", "咸鱼", "其他"].map(p => `<option value="${p}" ${platform === p ? 'selected' : ''}>${p}</option>`).join("");
+    const isZh = window.ERP_STORE.current_lang === "zh";
+    const expressCompanies = ["中通", "圆通", "申通", "韵达", "顺丰", "极兔", "邮政", "京东"];
+    const expOpts = expressCompanies.map(e => `<option value="${e}" ${expressCompany === e ? 'selected' : ''}>${e}</option>`).join("");
+
+    const sOpts = [
+        { v: "等待国内发货", t: isZh ? "🕒 待发货" : "🕒 Chờ giao" },
+        { v: "集运仓已到货", t: isZh ? "📦 已到仓" : "📦 Đến kho" },
+        { v: "跨境清关运输中", t: isZh ? "🚛 运输中" : "🚛 Vận chuyển" },
+        { v: "买家已完成收货", t: isZh ? "✅ 已签收" : "✅ Đã nhận" }
+    ].map(s => `<option value="${s.v}" ${status === s.v ? 'selected' : ''}>${s.t}</option>`).join("");
+
+    return `
+        <div class="platform-item bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5 relative">
+            <button type="button" onclick="removePlatformItem(this)" class="absolute right-3 top-3 text-rose-400 p-1 text-sm"><i class="fa-regular fa-trash-can"></i></button>
+            
+            <div class="flex gap-2">
+                <select class="mo-item-platform bg-white border border-slate-200 rounded-xl p-2 font-bold text-slate-700 w-1/3">${pOpts}</select>
+                <input type="text" placeholder="${isZh?'商品名称':'Tên sản phẩm'}" value="${name}" required class="mo-item-name bg-white border border-slate-200 rounded-xl p-2 font-bold flex-grow">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2">
+                <div class="relative">
+                    <span class="absolute left-3 top-2.5 text-slate-400 font-mono">¥</span>
+                    <input type="number" placeholder="${isZh?'本金':'Vốn'}" value="${cny || ''}" required class="mo-item-cny w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2 py-2 text-right font-mono font-bold text-slate-700">
+                </div>
+                <select class="mo-item-express-company bg-white border border-slate-200 rounded-xl p-2 font-bold text-slate-600">${expOpts}</select>
+            </div>
+            
+            <div class="flex gap-2 items-center">
+                <input type="text" placeholder="${isZh?'国内单号 (选填)':'Mã vận đơn (nếu có)'}" value="${track || ''}" class="mo-item-track bg-white border border-slate-200 rounded-xl p-2 font-mono text-[11px] flex-grow">
+                <select class="mo-item-status bg-white border border-slate-200 rounded-xl p-2 font-bold text-[11px] text-slate-600">${sOpts}</select>
+            </div>
+        </div>
+    `;
+}
+
+window.removePlatformItem = function(btn) {
+    const container = document.getElementById("platform-items-container");
+    if(container.children.length > 1) {
+        btn.closest('.platform-item').remove();
+        window.updateTotalCnySum();
+    } else { alert("至少保留一项"); }
+};
+
+window.updateTotalCnySum = function() {
+    let totalCny = 0;
+    document.querySelectorAll(".mo-item-cny").forEach(input => { totalCny += parseFloat(input.value) || 0; });
+    const db = document.getElementById("mo-total-cny-display");
+    if(db) db.innerText = "¥ " + totalCny.toLocaleString();
+};
+
+function setupModalCalculation(editIndex) {
+    const container = document.getElementById("platform-items-container");
+    document.getElementById("btn-add-platform").addEventListener("click", () => {
+        container.insertAdjacentHTML('beforeend', createPlatformItemRow("淘宝", "", 0, "", "等待国内发货", "中通"));
+        bindCnyInputListener();
+    });
+
+    function bindCnyInputListener() {
+        document.querySelectorAll(".mo-item-cny").forEach(input => {
+            input.removeEventListener("input", window.updateTotalCnySum);
+            input.addEventListener("input", window.updateTotalCnySum);
+        });
+    }
+    bindCnyInputListener();
+    window.updateTotalCnySum();
+
+    document.getElementById("add-order-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        let itemsList = [];
+        document.querySelectorAll(".platform-item").forEach(el => {
+            itemsList.push({
+                platform: el.querySelector(".mo-item-platform").value,
+                name: el.querySelector(".mo-item-name").value,
+                cny: parseFloat(el.querySelector(".mo-item-cny").value) || 0,
+                express_company: el.querySelector(".mo-item-express-company").value, 
+                track: el.querySelector(".mo-item-track").value.trim(),
+                status: el.querySelector(".mo-item-status").value || "等待国内发货"
+            });
+        });
+
+        const cust = document.getElementById("mo-customer").value;
+        const vnd = parseFloat(document.getElementById("mo-buyer-vnd").value) || 0;
+
+        let targetId = "";
+        let shippingFee = 0;
+
+        if (editIndex !== null) {
+            targetId = window.ERP_STORE.orders[editIndex].id;
+            shippingFee = window.ERP_STORE.orders[editIndex].shipping_fee_cny || 0;
+            window.ERP_STORE.orders[editIndex].customer = cust;
+            window.ERP_STORE.orders[editIndex].buyer_vnd = vnd;
+            window.ERP_STORE.orders[editIndex].items = itemsList;
+        } else {
+            targetId = "#ORD-" + Math.floor(10000 + Math.random() * 90000);
+            window.ERP_STORE.orders.unshift({ id: targetId, customer: cust, buyer_vnd: vnd, items: itemsList, shipping_fee_cny: 0 });
+        }
+
+        const targetPayload = { id: targetId, customer: cust, buyer_vnd: vnd, shipping_fee_cny: shippingFee, items: itemsList };
+        const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(targetPayload)
+        });
+
+        if (res.ok) { closeOrderModal(); refreshOrdersView(); }
+        else alert("同步 D1 失败");
+    });
+}
+
+window.closeOrderModal = function() {
+    const modal = document.getElementById("order-modal");
+    if (modal) modal.remove();
+};
+
+// ⚡ 核心修复点：将大括号严格在最外层闭合，保障文件被浏览器完整读取
+function openEditOrderModal(index) {
+    openOrderFormModal(index);
+}
