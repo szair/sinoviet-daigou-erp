@@ -1,5 +1,5 @@
 // ==========================================
-// 📦 中越通跨境代购 ERP - 订单业务核心模块 (完整无错修复版)
+// 📦 中越通跨境代购 ERP - 订单业务核心模块 (彻底根除 undefined 兼容版)
 // ==========================================
 
 function renderOrders() {
@@ -29,9 +29,7 @@ function renderOrders() {
     statuses.forEach(st => {
         const isActive = currentFilter === st;
         let activeClass = isActive ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" : "bg-white text-slate-500 border-slate-200";
-        if (st === "已取消" && isActive) {
-            activeClass = "bg-slate-500 text-white border-slate-500 shadow-sm";
-        }
+        if (st === "已取消" && isActive) activeClass = "bg-slate-500 text-white border-slate-500 shadow-sm";
 
         pillsHTML += `
             <button onclick="filterOrdersByStatus('${st}')" class="px-3 py-1.5 rounded-xl text-xs font-black transition-all border ${activeClass}" style="touch-action: manipulation;">
@@ -52,30 +50,36 @@ function renderOrders() {
         let itemsSummary = "";
         let totalCny = 0;
         
-        if (ord.items) {
-            ord.items.forEach(item => {
-                totalCny += parseFloat(item.cny || 0);
-                itemsSummary += `
-                    <div class="flex justify-between items-center bg-slate-50/50 p-2.5 rounded-xl border border-slate-100/60 text-xs">
-                        <div>
-                            <span class="text-slate-400 font-black">[${item.platform}]</span>
-                            <span class="text-slate-700 font-bold ml-1">${item.name}</span>
-                        </div>
-                        <span class="font-mono font-black text-slate-500">¥${item.cny}</span>
-                    </div>
-                `;
-            });
+        // ⚡ 防错洗涤：兼容处理 D1 字符串数据，确保不出现 undefined
+        let actualItems = ord.items;
+        if (typeof actualItems === "string") {
+            try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
         }
+        actualItems = actualItems || [];
+
+        actualItems.forEach(item => {
+            totalCny += parseFloat(item.cny || 0);
+            itemsSummary += `
+                <div class="flex justify-between items-center bg-slate-50/50 p-2.5 rounded-xl border border-slate-100/60 text-xs">
+                    <div>
+                        <span class="text-slate-400 font-black">[${item.platform || '淘宝'}]</span>
+                        <span class="text-slate-700 font-bold ml-1">${item.name || '未命名商品'}</span>
+                    </div>
+                    <span class="font-mono font-black text-slate-500">¥${item.cny || 0}</span>
+                </div>
+            `;
+        });
 
         const isCanceled = ord.status === "已取消";
         const cardOpacity = isCanceled ? "opacity-65 bg-slate-50/70 border-slate-200" : "bg-white border-slate-100";
+        const customerName = ord.customer || "未知买家";
 
         listHTML += `
             <div class="bg-white rounded-2xl p-5 shadow-sm border space-y-4 transition-all ${cardOpacity}">
                 <div class="flex justify-between items-start border-b border-slate-100 pb-3">
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="text-sm font-black text-slate-900">${ord.customer}</span>
+                            <span class="text-sm font-black text-slate-900">${customerName}</span>
                             ${isCanceled ? `<span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md text-[10px] font-black">已取消</span>` : ''}
                         </div>
                         <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">${ord.id}</span>
@@ -121,67 +125,65 @@ function renderOrders() {
 window.filterOrdersByStatus = function(status) {
     window.ERP_STORE.filter_status = status;
     const mv = document.getElementById("main-view");
-    if(mv) {
-        mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
-    }
+    if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
 };
 
-window.init_orders = function() {
-    // 基础生命周期挂载
-};
+window.init_orders = function() {};
 
 // =========================================================
-// 🔄 完璧归赵！深度编辑表单 与 安全控制台的完全体融合弹窗
+// 🔄 深度编辑表单 与 安全控制台弹窗
 // =========================================================
 window.openOrderDetailModalForManage = function(index) {
     const ord = window.ERP_STORE.orders[index];
     const isZh = window.ERP_STORE.current_lang === "zh";
     const orderIdTail = ord.id.split('-')[1] || ord.id;
+    const customerName = ord.customer || "未知买家";
 
-    // 1. 生成买家下拉选择框
     let customerOptions = "";
     window.ERP_STORE.customers.forEach(c => {
-        const selected = ord.customer === c.name ? "selected" : "";
+        const selected = customerName === c.name ? "selected" : "";
         customerOptions += `<option value="${c.name}" ${selected}>CUST-${c.id} - ${c.name}</option>`;
     });
 
-    // 2. 完美找回：生成内部多件商品行表单明细 (支持修改名称、本金、单号、状态)
     let itemsFormHTML = "";
-    if (ord.items && ord.items.length > 0) {
-        ord.items.forEach((item, itemIdx) => {
-            itemsFormHTML += `
-                <div class="item-form-row bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2 relative pt-7">
-                    <button type="button" onclick="removeItemRowFromForm(this)" class="absolute top-2 right-3 text-rose-500 font-bold text-xs">✕ ${isZh?'删除该件':'Xóa'}</button>
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <select class="item-platform bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-800">
-                            <option value="淘宝" ${item.platform==='淘宝'?'selected':''}>淘宝</option>
-                            <option value="拼多多" ${item.platform==='拼多多'?'selected':''}>拼多多</option>
-                            <option value="1688" ${item.platform==='1688'?'selected':''}>1688</option>
-                            <option value="其他" ${item.platform==='其他'?'selected':''}>其他</option>
-                        </select>
-                        <input type="text" class="item-name col-span-2 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold" value="${item.name}" placeholder="${isZh?'商品名称':'Tên sản phẩm'}">
-                    </div>
-                    <div class="grid grid-cols-2 gap-1.5">
-                        <div class="flex items-center bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-mono font-bold">
-                            <span class="text-slate-400 mr-1">¥</span>
-                            <input type="number" class="item-cny w-full focus:outline-none" value="${item.cny}" placeholder="本金" oninput="calculateFormTotalCny()">
-                        </div>
-                        <input type="text" class="item-track bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-mono font-bold" value="${item.track || ''}" placeholder="${isZh?'国内单号':'Mã vận đơn'}">
-                    </div>
-                    <div>
-                        <select class="item-status w-full bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-700">
-                            <option value="等待国内发货" ${item.status==='等待国内发货'?'selected':''}>🕒 ${isZh?'等待国内发货':'Chờ giao hàng'}</option>
-                            <option value="集运仓已到货" ${item.status==='集运仓已到货'?'selected':''}>📦 ${isZh?'集运仓已到货':'Đã đến kho'}</option>
-                            <option value="跨境清关运输中" ${item.status==='跨境清关运输中'?'selected':''}>🚛 ${isZh?'跨境清关运输中':'Đang vận chuyển'}</option>
-                            <option value="买家已完成收货" ${item.status==='买家已完成收货'?'selected':''}>✅ ${isZh?'买家已完成收货':'Đã nhận hàng'}</option>
-                        </select>
-                    </div>
-                </div>
-            `;
-        });
+    let actualItems = ord.items;
+    if (typeof actualItems === "string") {
+        try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
     }
+    actualItems = actualItems || [];
 
-    // 3. 构建安全的底部控制面板
+    actualItems.forEach((item, itemIdx) => {
+        itemsFormHTML += `
+            <div class="item-form-row bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2 relative pt-7">
+                <button type="button" onclick="removeItemRowFromForm(this)" class="absolute top-2 right-3 text-rose-500 font-bold text-xs">✕ ${isZh?'删除该件':'Xóa'}</button>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <select class="item-platform bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-800">
+                        <option value="淘宝" ${item.platform==='淘宝'?'selected':''}>淘宝</option>
+                        <option value="拼多多" ${item.platform==='拼多多'?'selected':''}>拼多多</option>
+                        <option value="1688" ${item.platform==='1688'?'selected':''}>1688</option>
+                        <option value="其他" ${item.platform==='其他'?'selected':''}>其他</option>
+                    </select>
+                    <input type="text" class="item-name col-span-2 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold" value="${item.name || ''}" placeholder="${isZh?'商品名称':'Tên sản phẩm'}">
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <div class="flex items-center bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-mono font-bold">
+                        <span class="text-slate-400 mr-1">¥</span>
+                        <input type="number" class="item-cny w-full focus:outline-none" value="${item.cny || 0}" placeholder="本金" oninput="calculateFormTotalCny()">
+                    </div>
+                    <input type="text" class="item-track bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-mono font-bold" value="${item.track || ''}" placeholder="${isZh?'国内单号':'Mã vận đơn'}">
+                </div>
+                <div>
+                    <select class="item-status w-full bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-700">
+                        <option value="等待国内发货" ${item.status==='等待国内发货'?'selected':''}>🕒 ${isZh?'等待国内发货':'Chờ giao hàng'}</option>
+                        <option value="集运仓已到货" ${item.status==='集运仓已到货'?'selected':''}>📦 ${isZh?'集运仓已到货':'Đã đến kho'}</option>
+                        <option value="跨境清关运输中" ${item.status==='跨境清关运输中'?'selected':''}>🚛 ${isZh?'跨境清关运输中':'Đang vận chuyển'}</option>
+                        <option value="买家已完成收货" ${item.status==='买家已完成收货'?'selected':''}>✅ ${isZh?'买家已完成收货':'Đã nhận hàng'}</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    });
+
     let dangerZoneHTML = "";
     if (ord.status === "已取消") {
         dangerZoneHTML = `
@@ -205,11 +207,9 @@ window.openOrderDetailModalForManage = function(index) {
         `;
     }
 
-    // 4. 完美编织的顶级高保真 H5 弹窗模板
     const modalHTML = `
         <div id="order-manage-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
             <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100 max-h-[90vh] flex flex-col animate-fadeIn">
-                
                 <div class="flex justify-between items-center border-b border-slate-100 p-4 shrink-0">
                     <h3 class="text-xs font-black text-slate-800"><i class="fa-solid fa-pen-to-square text-indigo-500"></i> ${isZh?'修改合并代购订单':'Chỉnh sửa đơn hàng'}</h3>
                     <button type="button" onclick="closeOrderModal()" class="text-slate-400 text-lg">✕</button>
@@ -234,7 +234,7 @@ window.openOrderDetailModalForManage = function(index) {
                     </div>
 
                     <div class="bg-slate-50 p-3 rounded-2xl flex justify-between items-center text-xs">
-                        <span class="text-slate-400">${isZh?'内部总本金估算':'Tổng tiền vốn估算'}:</span>
+                        <span class="text-slate-400">${isZh?'内部总本金估算':'Tổng tiền vốn'}:</span>
                         <span id="form-total-cny-display" class="font-mono font-black text-slate-900 text-sm">¥0</span>
                     </div>
 
@@ -245,26 +245,21 @@ window.openOrderDetailModalForManage = function(index) {
                     <button type="button" onclick="closeOrderModal()" class="w-1/3 bg-white border border-slate-200 text-slate-500 py-3 rounded-xl font-bold text-xs">${isZh?'取消':'Hủy'}</button>
                     <button type="button" onclick="submitOrderUpdateSaved(${index})" class="w-2/3 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs shadow-md active:scale-[0.98] transition-all">${isZh?'保存全部变动':'Lưu thay đổi'}</button>
                 </div>
-
             </div>
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    calculateFormTotalCny(); // 弹起时瞬间计算初始本金总额
+    calculateFormTotalCny();
     window.pushModalHistoryState("order-manage-modal");
 };
 
-// ⚡ 核心逻辑：表单实时算账
 window.calculateFormTotalCny = function() {
     let total = 0;
-    document.querySelectorAll(".item-cny").forEach(input => {
-        total += parseFloat(input.value) || 0;
-    });
+    document.querySelectorAll(".item-cny").forEach(input => { total += parseFloat(input.value) || 0; });
     const el = document.getElementById("form-total-cny-display");
     if(el) el.innerText = "¥" + total.toLocaleString();
 };
 
-// ⚡ 核心逻辑：增减单件商品行
 window.addItemRowToFormDynamic = function() {
     const isZh = window.ERP_STORE.current_lang === "zh";
     const container = document.getElementById("edit-order-items-container");
@@ -302,22 +297,14 @@ window.addItemRowToFormDynamic = function() {
 
 window.removeItemRowFromForm = function(btn) {
     const row = btn.closest(".item-form-row");
-    if(row) {
-        row.remove();
-        calculateFormTotalCny();
-    }
+    if(row) { row.remove(); calculateFormTotalCny(); }
 };
 
-// ==========================================
-// 💾 数据吞吐：收集完整表单数据并保存到 D1
-// ==========================================
 window.submitOrderUpdateSaved = async function(index) {
     const ord = window.ERP_STORE.orders[index];
     const isZh = window.ERP_STORE.current_lang === "zh";
-    
     const customer = document.getElementById("edit-order-customer").value;
     
-    // 组装最新打包出来的 items 数组
     const updatedItems = [];
     document.querySelectorAll(".item-form-row").forEach(row => {
         updatedItems.push({
@@ -330,33 +317,27 @@ window.submitOrderUpdateSaved = async function(index) {
     });
 
     if (updatedItems.length === 0) {
-        alert(isZh ? "⚠️ 订单内必须至少保留一件商品！若客户整单取消，请点击下方的【客户整单取消】按钮。" : "⚠️ Đơn hàng phải có ít nhất 1 sản phẩm!");
+        alert(isZh ? "⚠️ 订单内必须至少保留一件商品！" : "⚠️ Đơn hàng phải có ít nhất 1 sản phẩm!");
         return;
     }
 
-    // 联动云端同步更新
     const res = await fetch(`${window.API_BASE_URL}/api/orders/update_full`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            id: ord.id,
-            customer: customer,
-            items: updatedItems
-        })
+        body: JSON.stringify({ id: ord.id, customer: customer, items: updatedItems })
     });
 
     if (res.ok) {
         ord.customer = customer;
         ord.items = updatedItems;
         closeOrderModal();
-        window.renderGlobalSkeleton(); // 全面热重绘大盘与财务
-        alert(isZh ? "🎉 订单修改已成功云同步保存！" : "🎉 Lưu thay đổi thành công!");
+        window.renderGlobalSkeleton();
+        alert(isZh ? "🎉 订单修改已云同步保存！" : "🎉 Lưu thay đổi thành công!");
     } else {
         alert("D1 database update error");
     }
 };
 
-// ⚡ 逻辑：软取消与恢复一键切换
 window.toggleOrderCancelStatus = async function(index, shouldCancel) {
     const ord = window.ERP_STORE.orders[index];
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -370,9 +351,14 @@ window.toggleOrderCancelStatus = async function(index, shouldCancel) {
 
     if (res.ok) {
         ord.status = nextStatus;
-        if(ord.items) {
-            ord.items.forEach(item => item.status = shouldCancel ? "已取消" : "等待国内发货");
+        let actualItems = ord.items;
+        if (typeof actualItems === "string") {
+            try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
         }
+        if (actualItems && actualItems.length > 0) {
+            actualItems.forEach(item => item.status = nextStatus);
+        }
+        ord.items = actualItems;
         closeOrderModal();
         window.renderGlobalSkeleton();
         alert(isZh ? "🎉 订单状态已变动！" : "🎉 Cập nhật thành công!");
@@ -381,12 +367,11 @@ window.toggleOrderCancelStatus = async function(index, shouldCancel) {
     }
 };
 
-// ⚡ 逻辑：彻底粉碎防误触校验锁
 window.triggerUltimateDeleteOrder = function(orderId, tail, index) {
     const isZh = window.ERP_STORE.current_lang === "zh";
     const promptMsg = isZh 
-        ? `🚨 【终极警告】：此操作将永久物理粉碎删除该订单，绝对不可找回！\n若确定要销毁，请输入该单的数字尾号【 ${tail} 】进行验证：`
-        : `🚨 【CẢNH BÁO TỐI CAO】: Hành động này sẽ xóa vĩnh viễn đơn hàng khỏi D1!\nNhập mã đuôi 【 ${tail} 】 để xác nhận:`;
+        ? `🚨 【终极警告】：请输入该单的数字尾号【 ${tail} 】进行验证物理粉碎：`
+        : `🚨 【CẢNH BÁO TỐI CAO】: Nhập mã đuôi 【 ${tail} 】 để xác nhận xóa vĩnh viễn:`;
         
     const userInput = prompt(promptMsg);
     
@@ -404,7 +389,7 @@ window.triggerUltimateDeleteOrder = function(orderId, tail, index) {
             }
         });
     } else if (userInput !== null) {
-        alert(isZh ? "❌ 尾号校验失败！操作已强行拦截。" : "❌ Sai mã xác nhận! Đã ngăn chặn hành vi xóa.");
+        alert(isZh ? "❌ 尾号校验失败！操作已拦截。" : "❌ Sai mã xác nhận!");
     }
 };
 
@@ -414,5 +399,5 @@ window.closeOrderModal = function() {
 };
 
 window.openCreateOrderModalDirectly = function() {
-    // 保持你原本新增订单的触发器接口
+    if (typeof openOrderFormModal === "function") openOrderFormModal(null);
 };
