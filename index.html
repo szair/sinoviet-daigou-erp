@@ -2,58 +2,48 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>中越通跨境代购 ERP 运营系统</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans flex flex-col md:flex-row h-screen overflow-hidden pb-16 md:pb-0">
+<body class="bg-slate-50 text-slate-900 font-sans flex flex-col md:flex-row h-screen overflow-hidden select-none">
 
-    <aside class="hidden md:flex w-64 bg-slate-900 text-slate-300 flex-col justify-between shadow-xl z-10 flex-shrink-0">
+    <aside class="hidden md:flex w-64 bg-slate-900 text-slate-300 flex-col justify-between shadow-xl flex-shrink-0 z-20">
         <div>
             <div class="p-5 flex items-center gap-3 border-b border-slate-800">
-                <div class="bg-gradient-to-br from-red-600 to-amber-500 text-white p-2 rounded-xl font-black tracking-wider text-xs shadow-md">
-                    CN 🇻🇳 VN
-                </div>
+                <div class="bg-gradient-to-br from-red-600 to-amber-500 text-white p-2 rounded-xl font-black text-xs">CN 🇻🇳 VN</div>
                 <div>
-                    <h1 class="font-bold text-white tracking-wide text-sm flex items-center gap-1">中越通代购 ERP</h1>
+                    <h1 class="font-bold text-white text-sm">中越通代购 ERP</h1>
                     <span class="text-[10px] text-slate-500 block">Sino-Viet Express ERP</span>
                 </div>
             </div>
-            
-            <nav class="p-4 space-y-1" id="sidebar-menu">
-                </nav>
+            <nav class="p-4 space-y-1" id="sidebar-menu"></nav>
         </div>
     </aside>
 
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md text-slate-400 border-t border-slate-800 flex justify-around items-center h-16 z-[999] px-2 shadow-2xl" id="mobile-bottom-menu">
-        </div>
-
-    <div class="flex-grow flex flex-col min-w-0 overflow-hidden w-full">
-        <header class="bg-white h-14 md:h-16 border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shadow-sm flex-shrink-0">
-            <div class="flex items-center gap-2">
-                <div class="md:hidden bg-gradient-to-br from-red-600 to-amber-500 text-white px-2 py-1 rounded-lg font-black text-[10px]">
-                    CN-VN
-                </div>
-                <span id="page-title" class="text-sm md:text-base font-black text-slate-800">仪表盘 Dashboard</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-1.5">
-                    <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm">
-                        AD
-                    </div>
-                    <span class="text-[11px] font-bold text-slate-700 hidden sm:inline">管理员 (越南线)</span>
-                </div>
+    <div class="flex-grow flex flex-col min-w-0 overflow-hidden w-full h-full">
+        
+        <header class="bg-white h-12 md:h-16 border-b border-slate-100 flex items-center justify-between px-4 md:px-8 flex-shrink-0 z-10 shadow-sm">
+            <span id="page-title" class="text-sm md:text-base font-black text-slate-900 tracking-tight">大盘 Dashboard</span>
+            
+            <div class="hidden md:flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px]">AD</div>
+                <span class="text-[11px] font-bold text-slate-700">管理员 (越南线)</span>
             </div>
         </header>
 
-        <main class="flex-grow p-3 md:p-8 overflow-y-auto w-full select-none" id="main-view">
+        <main class="flex-grow p-3 md:p-6 overflow-y-auto w-full pb-24 md:pb-6" id="main-view">
             <div class="flex items-center justify-center h-full">
                 <i class="fa-solid fa-circle-notch animate-spin text-xl text-indigo-600"></i>
             </div>
         </main>
     </div>
+
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg text-slate-400 border-t border-slate-100 flex justify-around items-center h-16 z-[9999] px-2 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] pb-safe" id="mobile-bottom-menu">
+        </div>
 
     <script src="js/dashboard.js"></script>
     <script src="js/orders.js"></script>
