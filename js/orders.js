@@ -9,7 +9,7 @@ function renderOrders() {
     const tCost = isZh ? "内部本金 (CNY)" : "Vốn (CNY)";
     const tPrice = isZh ? "收取买家费用 (VND)" : "Thu khách (VND)";
     const tAction = isZh ? "操作" : "Thao tác";
-    const tAddBtn = isZh ? "新增订单" : "Thêm đơn mới"; // ⚡ 优化：文案已精简为“新增订单”
+    const tAddBtn = isZh ? "新增订单" : "Thêm đơn mới"; 
     const tExport = isZh ? "批量导出对账单" : "Xuất hóa đơn đối soát";
     const tTip = isZh ? "智能代购看板：点击列表中带箭头的蓝色快递单号可直接追踪国内一手实时物流轨迹。" : "Bảng thông minh: Nhấp vào mã vận đơn màu xanh để theo dõi trực tiếp lộ trình vận chuyển Trung Quốc.";
 
@@ -45,7 +45,9 @@ function renderOrders() {
                         break;
                 }
 
-                const trackStr = item.track ? `<a href="https://m.kuaidi100.com/result.jsp?nu=${item.track}" target="_blank" class="font-mono text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-100 transition font-bold" title="点击一键查中国国内真实快递轨迹">${item.track} <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>` : `<span class="text-slate-300 italic">${isZh ? '未发货' : 'Chưa giao'}</span>`;
+                // ⚡ 优化显现：在大盘列表里，把快递公司（如中通）和单号连在一起展示
+                const companyPrefix = item.express_company ? `(${item.express_company}) ` : "";
+                const trackStr = item.track ? `<a href="https://m.kuaidi100.com/result.jsp?nu=${item.track}" target="_blank" class="font-mono text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-100 transition font-bold" title="点击一键查中国国内真实快递轨迹">${companyPrefix}${item.track} <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>` : `<span class="text-slate-300 italic">${isZh ? '未发货' : 'Chưa giao'}</span>`;
 
                 itemsDetailHTML += `
                     <div class="flex items-center justify-between py-2 border-b border-dashed border-slate-100 last:border-0 text-[11px] md:text-xs">
@@ -147,7 +149,6 @@ function renderOrders() {
     `;
 }
 
-// ⚡ 核心修复点：解绑并精准绑定全新的路由拦截表单唤起函数
 window.init_orders = function() {
     const btn = document.getElementById("btn-trigger-add-order");
     if(btn) {
@@ -156,7 +157,6 @@ window.init_orders = function() {
     }
 };
 
-// 内部无缝中转引导函数
 function openAddOrderModalDirectly() {
     openOrderFormModal(null);
 }
@@ -177,10 +177,15 @@ window.quickMarkArrived = function(orderIndex, itemIndex) {
 
 window.quickAddTrack = function(orderIndex, itemIndex) {
     const currentTrack = window.ERP_STORE.orders[orderIndex].items[itemIndex].track || "";
-    const newTrack = prompt(window.ERP_STORE.current_lang === "zh" ? "请输入或扫描国内电商卖家的发货物流单号：" : "Vui lòng nhập hoặc quét mã vận đơn Trung Quốc:", currentTrack);
+    const newTrack = prompt(window.ERP_STORE.current_lang === "zh" ? "请输入中国国内电商的发货物流单号：" : "Vui lòng nhập mã vận đơn Trung Quốc:", currentTrack);
     
     if (newTrack !== null) {
+        // 快捷面板里也支持一键补录快递公司
+        const currentCompany = window.ERP_STORE.orders[orderIndex].items[itemIndex].express_company || "中通";
+        const newCompany = prompt("请输入快递公司名字（例如中通、圆通、顺丰）：", currentCompany);
+        
         window.ERP_STORE.orders[orderIndex].items[itemIndex].track = newTrack.trim();
+        window.ERP_STORE.orders[orderIndex].items[itemIndex].express_company = (newCompany || "中通").trim();
         syncOrderToD1Cloud(window.ERP_STORE.orders[orderIndex]);
     }
 };
@@ -210,10 +215,10 @@ function openOrderFormModal(editIndex = null) {
     let platformsHTML = "";
     if (isEdit && targetOrder.items) {
         targetOrder.items.forEach(item => {
-            platformsHTML += createPlatformItemRow(item.platform, item.name, item.cny, item.track, item.status);
+            platformsHTML += createPlatformItemRow(item.platform, item.name, item.cny, item.track, item.status, item.express_company);
         });
     } else {
-        platformsHTML = createPlatformItemRow("淘宝", "", 0, "", "等待国内发货");
+        platformsHTML = createPlatformItemRow("淘宝", "", 0, "", "等待国内发货", "中通");
     }
 
     const customerOptionsHTML = window.ERP_STORE.customers.map(c => {
@@ -223,7 +228,7 @@ function openOrderFormModal(editIndex = null) {
 
     const modalHTML = `
         <div id="order-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] overflow-y-auto py-4">
-            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden border border-slate-100 my-auto mx-4 animate-fadeIn">
+            <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden border border-slate-100 my-auto mx-4 animate-fadeIn">
                 <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                     <h3 class="text-xs font-bold text-slate-800">${isEdit ? (isZh?'深度调整订单与商品状态':'Chỉnh sửa thông tin đơn hàng') : (isZh?'新建中越合并代购订单':'Thêm đơn hàng mua hộ mới')}</h3>
                     <button type="button" onclick="closeOrderModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
@@ -275,9 +280,15 @@ function openOrderFormModal(editIndex = null) {
     setupModalCalculation(editIndex);
 }
 
-function createPlatformItemRow(platform, name, cny, track, status) {
+// ⚡ 核心追加：让每条商品明细自带“国内快递公司选择”+“国内单号”高精度数据对齐
+function createPlatformItemRow(platform, name, cny, track, status, expressCompany = "中通") {
     const pOpts = ["淘宝", "1688", "拼多多", "咸鱼", "其他"].map(p => `<option value="${p}" ${platform === p ? 'selected' : ''}>${p}</option>`).join("");
     const isZh = window.ERP_STORE.current_lang === "zh";
+    
+    // 🚚 追加国内主流代购高频快递选项
+    const expressCompanies = ["中通", "圆通", "申通", "韵达", "顺丰", "极兔", "邮政", "京东"];
+    const expOpts = expressCompanies.map(e => `<option value="${e}" ${expressCompany === e ? 'selected' : ''}>${e}</option>`).join("");
+
     const sOpts = [
         { v: "等待国内发货", t: isZh ? "🕒 待发货" : "🕒 Chờ giao" },
         { v: "集运仓已到货", t: isZh ? "📦 已到仓" : "📦 Đến kho" },
@@ -288,102 +299,16 @@ function createPlatformItemRow(platform, name, cny, track, status) {
     return `
         <div class="platform-item grid grid-cols-12 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 items-center">
             <div class="col-span-4 sm:col-span-2"><select class="mo-item-platform w-full bg-white border border-slate-200 rounded-lg p-1.5 font-bold text-slate-700">${pOpts}</select></div>
+            
             <div class="col-span-8 sm:col-span-3"><input type="text" placeholder="${isZh?'商品名称':'Tên sản phẩm'}" value="${name}" required class="mo-item-name w-full bg-white border border-slate-200 rounded-lg p-1.5 font-semibold"></div>
+            
             <div class="col-span-4 sm:col-span-2 relative">
                 <span class="absolute left-2 top-2 text-slate-400 font-mono">¥</span>
-                <input type="number" placeholder="${isZh?'本金':'Vốn'}" value="${cny || ''}" required class="w-full bg-white border border-slate-200 rounded-lg pl-5 pr-1.5 py-1.5 text-right font-mono font-bold text-slate-700">
+                <input type="number" placeholder="${isZh?'本金':'Vốn'}" value="${cny || ''}" required class="mo-item-cny w-full bg-white border border-slate-200 rounded-lg pl-5 pr-1.5 py-1.5 text-right font-mono font-bold text-slate-700">
             </div>
-            <div class="col-span-5 sm:col-span-3"><input type="text" placeholder="${isZh?'国内单号':'Mã vận đơn'}" value="${track || ''}" class="mo-item-track w-full bg-white border border-slate-200 rounded-lg p-1.5 font-mono text-[11px]"></div>
-            <div class="col-span-3 sm:col-span-2 flex gap-1 items-center justify-end">
-                <select class="mo-item-status bg-white border border-slate-200 rounded-lg p-1 font-bold text-[11px] text-slate-600">${sOpts}</select>
-                <button type="button" onclick="removePlatformItem(this)" class="text-rose-400 hover:text-rose-600 p-1 text-sm"><i class="fa-regular fa-trash-can"></i></button>
-            </div>
-        </div>
-    `;
-}
-
-window.removePlatformItem = function(btn) {
-    const container = document.getElementById("platform-items-container");
-    if(container.children.length > 1) {
-        btn.closest('.platform-item').remove();
-        window.updateTotalCnySum();
-    } else { alert("至少保留一项"); }
-};
-
-window.updateTotalCnySum = function() {
-    let totalCny = 0;
-    document.querySelectorAll(".mo-item-cny").forEach(input => { totalCny += parseFloat(input.value) || 0; });
-    const db = document.getElementById("mo-total-cny-display");
-    if(db) db.innerText = "¥ " + totalCny.toLocaleString();
-};
-
-function setupModalCalculation(editIndex) {
-    const container = document.getElementById("platform-items-container");
-    
-    document.getElementById("btn-add-platform").addEventListener("click", () => {
-        const row = createPlatformItemRow("淘宝", "", 0, "", "等待国内发货");
-        container.insertAdjacentHTML('beforeend', row);
-        bindCnyInputListener();
-    });
-
-    function bindCnyInputListener() {
-        document.querySelectorAll(".mo-item-cny").forEach(input => {
-            input.removeEventListener("input", window.updateTotalCnySum);
-            input.addEventListener("input", window.updateTotalCnySum);
-        });
-    }
-    bindCnyInputListener();
-    window.updateTotalCnySum();
-
-    document.getElementById("add-order-form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        let itemsList = [];
-        document.querySelectorAll(".platform-item").forEach(el => {
-            itemsList.push({
-                platform: el.querySelector(".mo-item-platform").value,
-                name: el.querySelector(".mo-item-name").value,
-                cny: parseFloat(el.querySelector(".mo-item-cny").value) || 0,
-                track: el.querySelector(".mo-item-track").value.trim(),
-                status: el.querySelector(".mo-item-status").value
-            });
-        });
-
-        const cust = document.getElementById("mo-customer").value;
-        const vnd = parseFloat(document.getElementById("mo-buyer-vnd").value) || 0;
-
-        let targetId = "";
-        let shippingFee = 0;
-
-        if (editIndex !== null) {
-            targetId = window.ERP_STORE.orders[editIndex].id;
-            shippingFee = window.ERP_STORE.orders[editIndex].shipping_fee_cny || 0;
-            window.ERP_STORE.orders[editIndex].customer = cust;
-            window.ERP_STORE.orders[editIndex].buyer_vnd = vnd;
-            window.ERP_STORE.orders[editIndex].items = itemsList;
-        } else {
-            targetId = "#ORD-" + Math.floor(10000 + Math.random() * 90000);
-            window.ERP_STORE.orders.unshift({ id: targetId, customer: cust, buyer_vnd: vnd, items: itemsList, shipping_fee_cny: 0 });
-        }
-
-        const targetPayload = { id: targetId, customer: cust, buyer_vnd: vnd, shipping_fee_cny: shippingFee, items: itemsList };
-        
-        const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(targetPayload)
-        });
-
-        if (res.ok) {
-            closeOrderModal();
-            refreshOrdersView();
-        } else {
-            alert("同步 D1 数据库失败，请重试");
-        }
-    });
-}
-
-window.closeOrderModal = function() {
-    const modal = document.getElementById("order-modal");
-    if (modal) modal.remove();
-};
+            
+            <div class="col-span-3 sm:col-span-2"><select class="mo-item-express-company w-full bg-white border border-slate-200 rounded-lg p-1.5 font-bold text-slate-600 text-[11px]">${expOpts}</select></div>
+            
+            <div class="col-span-5 sm:col-span-2"><input type="text" placeholder="${isZh?'国内单号':'Mã vận đơn'}" value="${track || ''}" class="mo-item-track w-full bg-white border border-slate-200 rounded-lg p-1.5 font-mono text-[11px]"></div>
+            
+            <div class="col-span-1
