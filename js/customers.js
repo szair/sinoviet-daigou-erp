@@ -1,73 +1,67 @@
 function renderCustomers() {
-    let rowsHTML = "";
     const isZh = window.ERP_STORE.current_lang === "zh";
-
-    const tId = isZh ? "客户 ID" : "Mã khách";
-    const tName = isZh ? "买家姓名 (昵称)" : "Tên khách hàng";
-    const tSocial = isZh ? "联络社交账号" : "Tài khoản MXH";
-    const tPhone = isZh ? "越南电话" : "Số ĐT (VN)";
-    const tAddress = isZh ? "越南本土收货地址" : "Địa chỉ nhận hàng (VN)";
-    const tAction = isZh ? "快捷操作" : "Thao tác";
+    let cardsHTML = "";
 
     window.ERP_STORE.customers.forEach((cust, index) => {
-        rowsHTML += `
-            <tr class="cust-row hover:bg-slate-50/40 transition text-xs font-semibold text-slate-600 border-b border-slate-100"
+        // 📱 H5 核心：重组为极简流畅的联系人名片流
+        cardsHTML += `
+            <div class="cust-row bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-4 animate-fadeIn"
                 data-search-name="${cust.name.toLowerCase()}"
                 data-search-phone="${cust.phone}"
                 data-search-id="${cust.id.toLowerCase()}">
-                <td class="p-4 font-mono font-bold text-slate-400">${cust.id}</td>
-                <td class="p-4 text-slate-900 font-bold">${cust.name}</td>
-                <td class="p-4 font-mono text-slate-500">${cust.social}</td>
-                <td class="p-4 font-mono text-slate-700">
-                    <a href="tel:${cust.phone}" class="hover:underline text-indigo-600">${cust.phone}</a>
-                </td>
-                <td class="p-4 max-w-xs sm:max-w-sm truncate text-slate-500" title="${cust.address}">${cust.address}</td>
-                <td class="p-4 text-center">
-                    <div class="flex items-center justify-center gap-2">
-                        <button onclick="copyCustomerShippingText(${index})" class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white px-3 py-2 rounded-xl border border-indigo-100 transition font-bold text-[11px] flex items-center gap-1">
-                            <i class="fa-regular fa-copy"></i> ${isZh ? '复制打单信息' : 'Copy địa chỉ'}
-                        </button>
-                        <button onclick="deleteCustomerProfile(${index})" class="text-rose-400 hover:text-rose-600 p-2 text-base transition">
-                            <i class="fa-regular fa-trash-can"></i>
-                        </button>
+                
+                <div class="flex justify-between items-start border-b border-slate-100 pb-3">
+                    <div>
+                        <h4 class="text-sm font-black text-slate-900">${cust.name}</h4>
+                        <span class="text-[11px] text-slate-400 font-mono mt-0.5 block">${cust.id}</span>
                     </div>
-                </td>
-            </tr>
+                    <button onclick="deleteCustomerProfile(${index})" class="text-rose-400 p-1 text-base" title="删除档案">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </div>
+
+                <div class="text-xs space-y-2 text-slate-600 font-semibold pl-1">
+                    <div class="flex items-center gap-2">
+                        <span class="w-16 text-slate-400 font-bold">${isZh?'社交号':'Mạng XH'}:</span>
+                        <span class="font-mono text-slate-800">${cust.social}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-16 text-slate-400 font-bold">${isZh?'越南电话':'Số ĐT'}:</span>
+                        <a href="tel:${cust.phone}" class="font-mono text-indigo-600 font-bold underline decoration-indigo-200">${cust.phone}</a>
+                    </div>
+                    <div class="flex items-start gap-2 leading-relaxed">
+                        <span class="w-16 text-slate-400 font-bold flex-shrink-0">${isZh?'收货地址':'Địa chỉ'}:</span>
+                        <span class="text-slate-500 font-medium">${cust.address}</span>
+                    </div>
+                </div>
+
+                <div class="pt-1">
+                    <button onclick="copyCustomerShippingText(${index})" class="w-full bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-xs border border-indigo-100/70 active:bg-indigo-600 active:text-white transition-all flex items-center justify-center gap-1.5">
+                        <i class="fa-regular fa-copy text-sm"></i> ${isZh ? '一键复制完整寄件打单文本' : 'Copy địa chỉ gửi hàng'}
+                    </button>
+                </div>
+            </div>
         `;
     });
 
-    if (rowsHTML === "") {
-        rowsHTML = `<tr><td colspan="6" class="text-slate-400 italic text-center py-8">${isZh?'暂无客户档案，请点击创建。':'Chưa có hồ sơ khách hàng.'}</td></tr>`;
+    if (cardsHTML === "") {
+        cardsHTML = `<div class="bg-white p-12 rounded-2xl border border-slate-100 text-center italic text-slate-400 text-xs">${isZh?'暂无买家数据档案':'Chưa có dữ liệu'}</div>`;
     }
 
     return `
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="p-4 md:p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-white">
-                <button id="btn-trigger-add-cust" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition w-full sm:w-auto justify-center">
-                    <i class="fa-solid fa-user-plus"></i> ${isZh?'创建新客户档案':'Thêm khách hàng mới'}
+        <div class="space-y-4 w-full max-w-md mx-auto">
+            <div class="flex flex-col gap-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <button id="btn-trigger-add-cust" class="w-full bg-indigo-600 text-white py-3 rounded-2xl text-xs font-black shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all">
+                    <i class="fa-solid fa-user-plus"></i> ${isZh?'创建新买家档案':'Thêm khách hàng'}
                 </button>
-                <div class="relative w-full sm:w-72">
-                    <span class="absolute left-3 top-3 text-slate-400 text-[11px]"><i class="fa-solid fa-search"></i></span>
-                    <input type="text" id="cust-search-input" placeholder="${isZh?'输入客户ID/姓名/电话搜索...':'Tìm tên, mã, số điện thoại...'}" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs focus:outline-none font-semibold">
+                <div class="relative w-full">
+                    <span class="absolute left-3.5 top-3 text-slate-400 text-[11px]"><i class="fa-solid fa-search"></i></span>
+                    <input type="text" id="cust-search-input" placeholder="${isZh?'搜索姓名、电话、唯一ID...':'Tìm tên, mã, số điện thoại...'}" class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-9 pr-4 py-2.5 text-xs focus:outline-none font-bold text-slate-800">
                 </div>
             </div>
 
-            <div class="overflow-x-auto w-full">
-                <table class="w-full text-left border-collapse min-w-[700px]">
-                    <thead>
-                        <tr class="text-slate-400 text-[10px] font-bold uppercase tracking-wider bg-slate-50/50 border-b border-slate-100">
-                            <th class="p-4 w-24">${tId}</th>
-                            <th class="p-4 w-44">${tName}</th>
-                            <th class="p-4 w-36">${tSocial}</th>
-                            <th class="p-4 w-32">${tPhone}</th>
-                            <th class="p-4">${tAddress}</th>
-                            <th class="p-4 text-center w-40 rounded-r-xl">${tAction}</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100" id="cust-table-body">
-                        ${rowsHTML}
-                    </tbody>
-                </table>
+            <div class="space-y-4 pb-12" id="cust-cards-container">
+                ${cardsHTML}
             </div>
         </div>
     `;
@@ -84,12 +78,12 @@ window.init_customers = function() {
     if(searchIn) {
         searchIn.addEventListener("input", (e) => {
             const val = e.target.value.trim().toLowerCase();
-            document.querySelectorAll(".cust-row").forEach(row => {
-                const name = row.getAttribute("data-search-name");
-                const phone = row.getAttribute("data-search-phone");
-                const id = row.getAttribute("data-search-id");
-                if(name.includes(val) || phone.includes(val) || id.includes(val)) row.classList.remove("hidden");
-                else row.classList.add("hidden");
+            document.querySelectorAll(".cust-row").forEach(card => {
+                const name = card.getAttribute("data-search-name");
+                const phone = card.getAttribute("data-search-phone");
+                const id = card.getAttribute("data-search-id");
+                if(name.includes(val) || phone.includes(val) || id.includes(val)) card.classList.remove("hidden");
+                else card.classList.add("hidden");
             });
         });
     }
@@ -99,41 +93,41 @@ function openAddCustomerModal() {
     const isZh = window.ERP_STORE.current_lang === "zh";
     const modalHTML = `
         <div id="cust-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-            <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-slate-100 my-auto animate-fadeIn">
-                <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 class="text-xs font-bold text-slate-800"><i class="fa-solid fa-address-card text-indigo-500"></i> ${isZh?'录入全新买家档案':'Tạo hồ sơ khách hàng mới'}</h3>
-                    <button type="button" onclick="closeCustModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+            <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100 my-auto animate-fadeIn">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="text-xs font-black text-slate-800"><i class="fa-solid fa-address-card text-indigo-500"></i> ${isZh?'录入全新买家档案':'Tạo hồ sơ khách mới'}</h3>
+                    <button type="button" onclick="closeCustModal()" class="text-slate-400 text-lg">✕</button>
                 </div>
                 
                 <form id="add-cust-form" class="p-5 space-y-4 text-xs">
                     <div>
-                        <label class="block text-slate-500 font-bold mb-1">${isZh?'买家姓名/微信昵称 (必填)':'Tên khách hàng / Nickname (Bắt buộc)'}</label>
-                        <input type="text" id="mo-cust-name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold focus:outline-none">
+                        <label class="block text-slate-400 font-bold mb-1">${isZh?'买家姓名/微信昵称 (必填)':'Tên khách hàng (Bắt buộc)'}</label>
+                        <input type="text" id="mo-cust-name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold focus:outline-none text-slate-800">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-slate-500 font-bold mb-1">${isZh?'社交号备注':'Tài khoản MXH'}</label>
-                            <input type="text" id="mo-cust-social" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                            <label class="block text-slate-400 font-bold mb-1">${isZh?'社交号':'Mạng XH'}</label>
+                            <input type="text" id="mo-cust-social" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none text-slate-800">
                         </div>
                         <div>
-                            <label class="block text-slate-500 font-bold mb-1">${isZh?'越南本土电话 (必填)':'Số điện thoại VN (Bắt buộc)'}</label>
-                            <input type="text" id="mo-cust-phone" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-mono focus:outline-none">
+                            <label class="block text-slate-400 font-bold mb-1">${isZh?'越南电话 (必填)':'Số điện thoại VN'}</label>
+                            <input type="text" id="mo-cust-phone" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-mono focus:outline-none text-slate-800">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-slate-500 font-bold mb-1">${isZh?'越南本土完整收货地址':'Địa chỉ nhận hàng tại Việt Nam'}</label>
-                        <textarea id="mo-cust-address" rows="3" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none font-semibold"></textarea>
+                        <label class="block text-slate-400 font-bold mb-1">${isZh?'越南本土完整收货地址':'Địa chỉ nhận hàng tại VN'}</label>
+                        <textarea id="mo-cust-address" rows="3" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:outline-none font-bold text-slate-700"></textarea>
                     </div>
                     <div class="flex gap-3 pt-2">
-                        <button type="button" onclick="closeCustModal()" class="w-1/4 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 rounded-xl font-bold transition">${isZh?'取消':'Hủy'}</button>
-                        <button type="submit" class="flex-grow bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl font-bold shadow-sm transition">${isZh?'生成唯一ID并入库':'Lưu hồ sơ khách hàng'}</button>
+                        <button type="button" onclick="closeCustModal()" class="w-1/4 bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold">${isZh?'取消':'Hủy'}</button>
+                        <button type="submit" class="flex-grow bg-indigo-600 text-white py-3 rounded-2xl font-black shadow-md">${isZh?'生成唯一ID并入库':'Lưu khách hàng'}</button>
                     </div>
                 </form>
             </div>
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    window.pushModalHistoryState("cust-modal"); // ⚡ 物理返回拦截启动
+    window.pushModalHistoryState("cust-modal"); 
     
     document.getElementById("add-cust-form").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -155,7 +149,7 @@ function openAddCustomerModal() {
             window.ERP_STORE.customers.push(payload);
             closeCustModal();
             refreshCustomersView();
-        } else alert("写入数据库失败");
+        } else alert("写入 D1 失败");
     });
 }
 
@@ -189,6 +183,6 @@ window.copyCustomerShippingText = function(index) {
     const cust = window.ERP_STORE.customers[index];
     const textToCopy = `Người nhận: ${cust.name}\nSĐT: ${cust.phone}\nĐịa chỉ: ${cust.address}`;
     navigator.clipboard.writeText(textToCopy).then(() => {
-        alert(window.ERP_STORE.current_lang === 'zh' ? `🎉 打单寄件信息已复制！` : `🎉 Đã copy thông tin vận đơn!`);
+        alert(window.ERP_STORE.current_lang === 'zh' ? `🎉 寄件打单文本已复制！` : `🎉 Đã copy thông tin vận đơn!`);
     });
 };
