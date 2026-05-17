@@ -1,5 +1,5 @@
 // =========================================================
-// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (全接口对齐完全体)
+// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (严格闭合完美版)
 // =========================================================
 
 function renderOrders() {
@@ -72,7 +72,6 @@ function renderOrders() {
         const isCanceled = ord.status === "已取消";
         const cardOpacity = isCanceled ? "opacity-65 bg-slate-50/70 border-slate-200" : "bg-white border-slate-100";
         
-        // 🧼 强力清洗历史遗留的重复买家前缀
         let customerName = ord.customer || "未知买家";
         if (customerName.startsWith("CUST-CUST-")) {
             customerName = customerName.replace("CUST-CUST-", "");
@@ -230,4 +229,198 @@ window.openOrderDetailModalForManage = function(index) {
                     <div class="space-y-2">
                         <div class="flex justify-between items-center">
                             <label class="text-slate-400">${isZh?'采购商品明细控制台':'Danh sách sản phẩm'}</label>
-                            <button type="button" onclick="addItemRowToFormDynamic()" class="text-indigo-600 font-black flex items-center gap-1 text-
+                            <button type="button" onclick="addItemRowToFormDynamic()" class="text-indigo-600 font-black flex items-center gap-1 text-[11px]"><i class="fa-solid fa-circle-plus"></i> ${isZh?'增加一件商品':'Thêm hàng'}</button>
+                        </div>
+                        <div id="edit-order-items-container" class="space-y-3">
+                            ${itemsFormHTML}
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 p-3 rounded-2xl flex justify-between items-center text-xs">
+                        <span class="text-slate-400">${isZh?'内部总本金估算':'Tổng tiền vốn'}:</span>
+                        <span id="form-total-cny-display" class="font-mono font-black text-slate-900 text-sm">¥0</span>
+                    </div>
+
+                    ${dangerZoneHTML}
+                </form>
+
+                <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-2 shrink-0">
+                    <button type="button" onclick="closeOrderModal()" class="w-1/3 bg-white border border-slate-200 text-slate-500 py-3 rounded-xl font-bold text-xs">${isZh?'取消':'Hủy'}</button>
+                    <button type="button" onclick="submitOrderUpdateSaved(${index})" class="w-2/3 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs shadow-md active:scale-[0.98] transition-all">${isZh?'保存全部变动':'Lưu thay đổi'}</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    calculateFormTotalCny();
+    window.pushModalHistoryState("order-manage-modal");
+}
+
+window.calculateFormTotalCny = function() {
+    let total = 0;
+    document.querySelectorAll(".item-cny").forEach(input => { total += parseFloat(input.value) || 0; });
+    const el = document.getElementById("form-total-cny-display");
+    if(el) el.innerText = "¥" + total.toLocaleString();
+};
+
+window.addItemRowToFormDynamic = function() {
+    const isZh = window.ERP_STORE.current_lang === "zh";
+    const container = document.getElementById("edit-order-items-container");
+    const rowHTML = `
+        <div class="item-form-row bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2 relative pt-7 animate-fadeIn">
+            <button type="button" onclick="removeItemRowFromForm(this)" class="absolute top-2 right-3 text-rose-500 font-bold text-xs">✕ ${isZh?'删除该件':'Xóa'}</button>
+            <div class="grid grid-cols-3 gap-1.5">
+                <select class="item-platform bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-800">
+                    <option value="淘宝">淘宝</option>
+                    <option value="拼多多">拼多多</option>
+                    <option value="1688">1688</option>
+                    <option value="其他">其他</option>
+                </select>
+                <input type="text" class="item-name col-span-2 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold" placeholder="${isZh?'商品名称':'Tên sản phẩm'}">
+            </div>
+            <div class="grid grid-cols-2 gap-1.5">
+                <div class="flex items-center bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-mono font-bold">
+                    <span class="text-slate-400 mr-1">¥</span>
+                    <input type="number" class="item-cny w-full focus:outline-none" placeholder="本金" oninput="calculateFormTotalCny()">
+                </div>
+                <input type="text" class="item-track bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-mono font-bold" placeholder="${isZh?'国内单号':'Mã vận đơn'}">
+            </div>
+            <div>
+                <select class="item-status w-full bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-700">
+                    <option value="等待国内发货">🕒 ${isZh?'等待国内发货':'Chờ giao hàng'}</option>
+                    <option value="集运仓已到货">📦 ${isZh?'集运仓已到货':'Đã đến kho'}</option>
+                    <option value="跨境清关运输中">🚛 ${isZh?'跨境清关运输中':'Đang vận chuyển'}</option>
+                    <option value="买家已完成收货">✅ ${isZh?'买家已完成收货':'Đã nhận hàng'}</option>
+                </select>
+            </div>
+        </div>
+    `;
+    if(container) container.insertAdjacentHTML('beforeend', rowHTML);
+};
+
+window.removeItemRowFromForm = function(btn) {
+    const row = btn.closest(".item-form-row");
+    if(row) { row.remove(); calculateFormTotalCny(); }
+};
+
+window.submitOrderUpdateSaved = async function(index) {
+    const ord = window.ERP_STORE.orders[index];
+    const isZh = window.ERP_STORE.current_lang === "zh";
+    const customer = document.getElementById("edit-order-customer").value;
+    
+    const updatedItems = [];
+    document.querySelectorAll(".item-form-row").forEach(row => {
+        updatedItems.push({
+            platform: row.querySelector(".item-platform").value,
+            name: row.querySelector(".item-name").value.trim(),
+            cny: parseFloat(row.querySelector(".item-cny").value) || 0,
+            track: row.querySelector(".item-track").value.trim(),
+            status: row.querySelector(".item-status").value
+        });
+    });
+
+    if (updatedItems.length === 0) {
+        alert(isZh ? "⚠️ 订单内必须至少保留一件商品！" : "⚠️ Đơn hàng phải có ít nhất 1 sản phẩm!");
+        return;
+    }
+
+    const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: ord.id,
+            customer: customer,
+            buyer_vnd: ord.buyer_vnd || 0,
+            shipping_fee_cny: ord.shipping_fee_cny || 0,
+            items: updatedItems
+        })
+    });
+
+    if (res.ok) {
+        ord.customer = customer;
+        ord.items = updatedItems;
+        closeOrderModal();
+        window.renderGlobalSkeleton();
+        alert(isZh ? "🎉 订单修改已云同步保存！" : "🎉 Lưu thay đổi thành công!");
+    } else {
+        alert("D1 Link Error");
+    }
+};
+
+window.toggleOrderCancelStatus = async function(index, shouldCancel) {
+    const ord = window.ERP_STORE.orders[index];
+    const isZh = window.ERP_STORE.current_lang === "zh";
+    const nextStatus = shouldCancel ? "已取消" : "等待国内发货";
+    
+    let actualItems = ord.items;
+    if (typeof actualItems === "string") {
+        try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
+    }
+    actualItems = actualItems || [];
+    
+    actualItems.forEach(item => item.status = nextStatus);
+
+    const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: ord.id,
+            customer: ord.customer,
+            buyer_vnd: ord.buyer_vnd || 0,
+            shipping_fee_cny: ord.shipping_fee_cny || 0,
+            items: actualItems
+        })
+    });
+
+    if (res.ok) {
+        ord.status = nextStatus;
+        ord.items = actualItems;
+        
+        await fetch(`${window.API_BASE_URL}/api/orders/update_status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: ord.id, status: nextStatus })
+        });
+
+        closeOrderModal();
+        window.renderGlobalSkeleton();
+        alert(isZh ? "🎉 订单状态已变动！" : "🎉 Cập nhật thành công!");
+    } else {
+        alert("D1 Link Error");
+    }
+};
+
+window.triggerUltimateDeleteOrder = function(orderId, tail, index) {
+    const isZh = window.ERP_STORE.current_lang === "zh";
+    const promptMsg = isZh 
+        ? `🚨 【终极警告】：请输入该单的数字尾号【 ${tail} 】进行验证物理粉碎：`
+        : `🚨 【CẢNH BÁO TỐI CAO】: Nhập mã đuôi 【 ${tail} 】 để xác nhận xóa vĩnh viễn:`;
+        
+    const userInput = prompt(promptMsg);
+    
+    if (userInput === tail) {
+        fetch(`${window.API_BASE_URL}/api/orders/delete`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: orderId })
+        }).then(res => {
+            if (res.ok) {
+                window.ERP_STORE.orders.splice(index, 1);
+                closeOrderModal();
+                window.renderGlobalSkeleton();
+                alert(isZh ? "🗑️ 订单已被永久物理销毁。" : "🗑️ Đã xóa đơn hàng vĩnh viễn.");
+            }
+        });
+    } else if (userInput !== null) {
+        alert(isZh ? "❌ 尾号校验失败！操作已拦截。" : "❌ Sai mã xác nhận!");
+    }
+};
+
+window.closeOrderModal = function() {
+    const m = document.getElementById("order-manage-modal");
+    if(m) m.remove();
+};
+
+window.openCreateOrderModalDirectly = function() {
+    if (typeof openOrderFormModal === "function") openOrderFormModal(null);
+};
