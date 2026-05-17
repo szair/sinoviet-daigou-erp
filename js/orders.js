@@ -3,18 +3,45 @@ function renderOrders() {
     const tAddBtn = isZh ? "新增订单" : "Thêm đơn mới"; 
     const tTip = isZh ? "点击蓝色单号可直接追踪中国国内实时物流轨迹。" : "Nhấp vào mã vận đơn để theo dõi trực tiếp lộ trình.";
 
-    let filterNotificationHTML = "";
-    if (window.ERP_STORE.filter_status) {
-        filterNotificationHTML = `
-            <div class="mb-4 bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex justify-between items-center text-xs text-indigo-700 font-bold animate-fadeIn">
-                <span>${isZh ? `当前只看：【${window.ERP_STORE.filter_status}】` : `Đang lọc: 【${window.ERP_STORE.filter_status}】`}</span>
-                <button onclick="clearOrderFilterLock()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-xl font-bold text-[11px]">
-                    ${isZh ? '显示全部' : 'Hiện tất cả'}
-                </button>
-            </div>
-        `;
-    }
+    // ⚡ H5 核心：计算各个状态的实时积压件数，展示在顶部药丸上，让老板心里有数
+    let countAll = 0, countWait = 0, countArrived = 0, countShipping = 0, countDone = 0;
+    
+    window.ERP_STORE.orders.forEach(ord => {
+        if (ord.items) {
+            ord.items.forEach(item => {
+                countAll++;
+                if (item.status === "等待国内发货") countWait++;
+                if (item.status === "集运仓已到货") countArrived++;
+                if (item.status === "跨境清关运输中") countShipping++;
+                if (item.status === "买家已完成收货") countDone++;
+            });
+        }
+    });
 
+    const curFilter = window.ERP_STORE.filter_status;
+
+    // 💊 核心增加：H5 专属的顶部吸顶“药丸胶囊”横向滑动筛选条
+    const filterTabsHTML = `
+        <div class="flex gap-2 overflow-x-auto pb-2 pt-1 no-scrollbar select-none">
+            <button onclick="setOrderFilterLock(null)" class="flex-shrink-0 px-4 py-2 rounded-full font-black text-xs transition-all ${!curFilter ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}">
+                ${isZh?'全部':'Tất cả'} (${countAll})
+            </button>
+            <button onclick="setOrderFilterLock('等待国内发货')" class="flex-shrink-0 px-4 py-2 rounded-full font-black text-xs transition-all ${curFilter === '等待国内发货' ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}">
+                🕒 ${isZh?'待发货':'Chờ giao'} (${countWait})
+            </button>
+            <button onclick="setOrderFilterLock('集运仓已到货')" class="flex-shrink-0 px-4 py-2 rounded-full font-black text-xs transition-all ${curFilter === '集运仓已到货' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}">
+                📦 ${isZh?'已到仓':'Đến kho'} (${countArrived})
+            </button>
+            <button onclick="setOrderFilterLock('跨境清关运输中')" class="flex-shrink-0 px-4 py-2 rounded-full font-black text-xs transition-all ${curFilter === '跨境清关运输中' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}">
+                🚛 ${isZh?'运输中':'Vận chuyển'} (${countShipping})
+            </button>
+            <button onclick="setOrderFilterLock('买家已完成收货')" class="flex-shrink-0 px-4 py-2 rounded-full font-black text-xs transition-all ${curFilter === '买家已完成收货' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}">
+                ✅ ${isZh?'已签收':'Đã nhận'} (${countDone})
+            </button>
+        </div>
+    `;
+
+    // 构建 H5 卡片流
     let cardsHTML = "";
 
     window.ERP_STORE.orders.forEach((ord, orderIndex) => {
@@ -26,7 +53,7 @@ function renderOrders() {
             ord.items.forEach((item, itemIndex) => {
                 totalCny += item.cny;
 
-                const curFilter = window.ERP_STORE.filter_status;
+                // 智能分类拦截过滤
                 if (curFilter && item.status !== curFilter) return; 
                 visibleItemsInOrder++;
 
@@ -48,13 +75,13 @@ function renderOrders() {
 
                 const companyPrefix = item.express_company ? `(${item.express_company}) ` : "";
                 const trackStr = item.track 
-                    ? `<a href="https://m.kuaidi100.com/result.jsp?nu=${item.track}" target="_blank" class="font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded-xl border border-indigo-100 font-bold block mt-1 text-center">${companyPrefix}${item.track} <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>` 
-                    : `<span class="text-slate-300 italic block mt-1">${isZh ? '暂无单号' : 'Chưa có mã'}</span>`;
+                    ? `<a href="https://m.kuaidi100.com/result.jsp?nu=${item.track}" target="_blank" class="font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded-xl border border-indigo-100 font-bold block mt-1 text-center text-xs">${companyPrefix}${item.track} <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>` 
+                    : `<span class="text-slate-300 italic block mt-1 text-xs text-center">${isZh ? '暂无单号' : 'Chưa có mã'}</span>`;
 
                 itemsDetailHTML += `
-                    <div class="py-3 border-b border-dashed border-slate-100 last:border-0 space-y-1.5">
+                    <div class="py-3 border-b border-dashed border-slate-100 last:border-0 space-y-2">
                         <div class="flex justify-between items-start gap-2">
-                            <div class="font-bold text-slate-800 leading-snug">
+                            <div class="font-bold text-slate-800 leading-snug text-xs md:text-sm">
                                 <span class="text-slate-400 font-black">[${item.platform}]</span> ${item.name}
                             </div>
                             <div class="flex-shrink-0">${itemStatusBadge}</div>
@@ -62,8 +89,8 @@ function renderOrders() {
                         <div class="flex justify-between items-center text-xs text-slate-500 font-semibold">
                             <div>${isZh?'本金':'Vốn'}: <span class="font-mono text-slate-700 font-bold">¥${item.cny}</span></div>
                             <div class="flex gap-1.5">
-                                ${!item.track ? `<button onclick="quickAddTrack(${orderIndex}, ${itemIndex})" class="text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-xl border border-indigo-100 font-black"><i class="fa-solid fa-truck-ramp-box"></i> ${isZh?'填单':'Mã'}</button>` : ''}
-                                ${item.status === '等待国内发货' ? `<button onclick="quickMarkArrived(${orderIndex}, ${itemIndex})" class="text-white bg-indigo-600 px-2.5 py-1.5 rounded-xl font-black shadow-sm"><i class="fa-solid fa-box"></i> ${isZh?'到仓':'Kho'}</button>` : ''}
+                                ${!item.track ? `<button onclick="quickAddTrack(${orderIndex}, ${itemIndex})" class="text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-xl border border-indigo-100 font-black text-[11px]"><i class="fa-solid fa-truck-ramp-box"></i> ${isZh?'填单':'Mã'}</button>` : ''}
+                                ${item.status === '等待国内发货' ? `<button onclick="quickMarkArrived(${orderIndex}, ${itemIndex})" class="text-white bg-indigo-600 px-2.5 py-1.5 rounded-xl font-black shadow-sm text-[11px]"><i class="fa-solid fa-box"></i> ${isZh?'到仓':'Kho'}</button>` : ''}
                             </div>
                         </div>
                         <div>${trackStr}</div>
@@ -72,7 +99,8 @@ function renderOrders() {
             });
         }
 
-        if (window.ERP_STORE.filter_status && visibleItemsInOrder === 0) return;
+        // 如果当前订单里没有符合当前筛选状态的商品，整张卡片完全隐形
+        if (curFilter && visibleItemsInOrder === 0) return;
 
         const buyerVnd = ord.buyer_vnd ? ord.buyer_vnd.toLocaleString() + " ₫" : "0 ₫";
 
@@ -110,7 +138,7 @@ function renderOrders() {
 
     return `
         <div class="space-y-4 w-full max-w-md mx-auto">
-            ${filterNotificationHTML}
+            ${filterTabsHTML}
             
             <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100 gap-3">
                 <button id="btn-trigger-add-order" class="bg-indigo-600 text-white px-5 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 shadow-md flex-grow active:scale-[0.98] transition-all">
@@ -137,6 +165,13 @@ window.init_orders = function() {
 };
 
 function openAddOrderModalDirectly() { openOrderFormModal(null); }
+
+// ⚡ 核心追加：药丸点击事件处理器
+window.setOrderFilterLock = function(status) {
+    window.ERP_STORE.filter_status = status;
+    refreshOrdersView();
+};
+
 window.clearOrderFilterLock = function() { window.ERP_STORE.filter_status = null; refreshOrdersView(); };
 
 window.quickMarkArrived = function(orderIndex, itemIndex) {
@@ -365,7 +400,6 @@ window.closeOrderModal = function() {
     if (modal) modal.remove();
 };
 
-// ⚡ 核心修复点：将大括号严格在最外层闭合，保障文件被浏览器完整读取
 function openEditOrderModal(index) {
     openOrderFormModal(index);
 }
