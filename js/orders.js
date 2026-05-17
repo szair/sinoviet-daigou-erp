@@ -9,7 +9,7 @@ function renderOrders() {
     const tCost = isZh ? "内部本金 (CNY)" : "Vốn (CNY)";
     const tPrice = isZh ? "收取买家费用 (VND)" : "Thu khách (VND)";
     const tAction = isZh ? "操作" : "Thao tác";
-    const tAddBtn = isZh ? "新增多平台代购订单" : "Thêm đơn mua hộ mới";
+    const tAddBtn = isZh ? "新增订单" : "Thêm đơn mới"; // ⚡ 优化：文案已精简为“新增订单”
     const tExport = isZh ? "批量导出对账单" : "Xuất hóa đơn đối soát";
     const tTip = isZh ? "智能代购看板：点击列表中带箭头的蓝色快递单号可直接追踪国内一手实时物流轨迹。" : "Bảng thông minh: Nhấp vào mã vận đơn màu xanh để theo dõi trực tiếp lộ trình vận chuyển Trung Quốc.";
 
@@ -22,7 +22,7 @@ function renderOrders() {
             ord.items.forEach((item, itemIndex) => {
                 totalCny += item.cny;
 
-                // 核心提效：大盘下钻过滤锁检查
+                // 大盘下钻过滤锁检查
                 const curFilter = window.ERP_STORE.filter_status;
                 if (curFilter && item.status !== curFilter) {
                     return; 
@@ -45,7 +45,6 @@ function renderOrders() {
                         break;
                 }
 
-                // 单号动态追溯超链接：一键拉起物理快递查询
                 const trackStr = item.track ? `<a href="https://m.kuaidi100.com/result.jsp?nu=${item.track}" target="_blank" class="font-mono text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-100 transition font-bold" title="点击一键查中国国内真实快递轨迹">${item.track} <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>` : `<span class="text-slate-300 italic">${isZh ? '未发货' : 'Chưa giao'}</span>`;
 
                 itemsDetailHTML += `
@@ -115,8 +114,8 @@ function renderOrders() {
         ${filterNotificationHTML}
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="p-4 md:p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-white">
-                <div class="flex gap-2">
-                    <button id="btn-trigger-add-order" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button id="btn-trigger-add-order" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition w-full sm:w-auto justify-center">
                         <i class="fa-solid fa-plus"></i> ${tAddBtn}
                     </button>
                     <button class="border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-xl text-xs font-bold transition hidden md:inline-block">${tExport}</button>
@@ -148,13 +147,19 @@ function renderOrders() {
     `;
 }
 
+// ⚡ 核心修复点：解绑并精准绑定全新的路由拦截表单唤起函数
 window.init_orders = function() {
     const btn = document.getElementById("btn-trigger-add-order");
     if(btn) {
-        btn.removeEventListener("click", openAddOrderModal);
-        btn.addEventListener("click", openAddOrderModal);
+        btn.removeEventListener("click", openAddOrderModalDirectly);
+        btn.addEventListener("click", openAddOrderModalDirectly);
     }
 };
+
+// 内部无缝中转引导函数
+function openAddOrderModalDirectly() {
+    openOrderFormModal(null);
+}
 
 window.clearOrderFilterLock = function() {
     window.ERP_STORE.filter_status = null;
