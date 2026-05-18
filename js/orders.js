@@ -1,5 +1,5 @@
 // =========================================================
-// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (完全体闭合版)
+// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (彻底对齐对账修复版)
 // =========================================================
 
 function renderOrders() {
@@ -144,21 +144,19 @@ window.openCreateOrderModalDirectly = function() {
 };
 
 // =========================================================
-// 🔄 满血合一：负责新建(null)与深度修改(index)的超大动态弹窗核心
+// 🔄 动态新建与修改大表单核心
 // =========================================================
 window.openOrderFormModal = function(editIndex = null) {
     const isEdit = editIndex !== null;
     const isZh = window.ERP_STORE.current_lang === "zh";
     const targetOrder = isEdit ? window.ERP_STORE.orders[editIndex] : { id: "", customer: "", buyer_vnd: 0, items: [] };
 
-    // 1. 生成买家档案下拉框
     let customerOptions = "";
     window.ERP_STORE.customers.forEach(c => {
         const selected = (!isEdit && window.ERP_STORE.customers.length === 1) || (isEdit && targetOrder.customer === c.name) ? "selected" : "";
         customerOptions += `<option value="${c.name}" ${selected}>${c.id.replace("CUST-", "")} - ${c.name}</option>`;
     });
 
-    // 2. 生成多件商品子行表单
     let itemsFormHTML = "";
     let actualItems = targetOrder.items || [];
     if (typeof actualItems === "string") {
@@ -170,7 +168,6 @@ window.openOrderFormModal = function(editIndex = null) {
             itemsFormHTML += createPlatformItemRowTemplate(item.platform, item.name, item.cny, item.track, item.status, item.express_company);
         });
     } else {
-        // 如果是全新创建，默认塞入一笔空行省去买家自己添加的操作
         itemsFormHTML += createPlatformItemRowTemplate("淘宝", "", "", "", "等待国内发货", "中通");
     }
 
@@ -260,6 +257,7 @@ function createPlatformItemRowTemplate(platform, name, cny, track, status, expre
     `;
 }
 
+// ⚡ 严格校准 1：实时算账彻底与 .mo-cny-input 对齐
 window.calculateFormTotalCnyActual = function() {
     let total = 0;
     document.querySelectorAll(".mo-cny-input").forEach(input => { total += parseFloat(input.value) || 0; });
@@ -290,7 +288,7 @@ window.closeOrderFormModalActual = function() {
 };
 
 // =========================================================
-// 💾 数据保存吞吐中心（新建与修改全面对接后端的 /api/orders/save）
+// 💾 数据保存吞吐中心 (严格校准 2：读取对齐所有 mo- 选择器类名)
 // =========================================================
 window.submitOrderFormActualAction = async function(editIndex) {
     const isEdit = editIndex !== null;
@@ -302,10 +300,12 @@ window.submitOrderFormActualAction = async function(editIndex) {
     const itemsList = [];
     let isFormValid = true;
 
+    // ⚡ 核心对齐修复：精准通过 .mo-item-row-actual 循环并读取内部子选择器
     document.querySelectorAll(".mo-item-row-actual").forEach(row => {
         const name = row.querySelector(".mo-name-input").value.trim();
         const cny = parseFloat(row.querySelector(".mo-cny-input").value) || 0;
         
+        // 只要名字为空或者本金不大于 0，直接打上失效标签触发拦截锁
         if(!name || cny <= 0) isFormValid = false;
 
         itemsList.push({
@@ -346,13 +346,11 @@ window.submitOrderFormActualAction = async function(editIndex) {
             window.ERP_STORE.orders[editIndex].buyer_vnd = buyerVnd;
             window.ERP_STORE.orders[editIndex].items = itemsList;
         } else {
-            // 新创建的单子塞在最前面
             payload.status = "等待国内发货";
             window.ERP_STORE.orders.unshift(payload);
         }
         closeOrderFormModalActual();
         
-        // 瞬间热刷新渲染列表区
         const mv = document.getElementById("main-view");
         if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
         window.init_orders();
@@ -364,7 +362,7 @@ window.submitOrderFormActualAction = async function(editIndex) {
 };
 
 // =========================================================
-// 🔄 深度管理独立控制台（整单软取消与彻底物理粉碎）
+// 🔄 深度管理独立控制台
 // =========================================================
 window.openOrderDetailModalForManage = function(index) {
     const ord = window.ERP_STORE.orders[index];
