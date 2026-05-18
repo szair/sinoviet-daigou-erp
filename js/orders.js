@@ -1,5 +1,5 @@
 // =========================================================
-// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (彻底对齐对账修复版)
+// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (浮点数高精对账版)
 // =========================================================
 
 function renderOrders() {
@@ -245,7 +245,7 @@ function createPlatformItemRowTemplate(platform, name, cny, track, status, expre
             <div class="grid grid-cols-2 gap-1.5">
                 <div class="relative">
                     <span class="absolute left-3 top-2 text-slate-400 font-mono">¥</span>
-                    <input type="number" class="mo-cny-input w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2 py-2 text-right font-mono font-bold text-slate-700" value="${cny}" placeholder="${isZh?'本金':'Vốn'}" oninput="calculateFormTotalCnyActual()" required>
+                    <input type="text" class="mo-cny-input w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2 py-2 text-right font-mono font-bold text-slate-700" value="${cny}" placeholder="${isZh?'本金':'Vốn'}" oninput="calculateFormTotalCnyActual()" required>
                 </div>
                 <select class="mo-express-select bg-white border border-slate-200 rounded-xl p-2 font-bold text-slate-600">${expOpts}</select>
             </div>
@@ -257,12 +257,16 @@ function createPlatformItemRowTemplate(platform, name, cny, track, status, expre
     `;
 }
 
-// ⚡ 严格校准 1：实时算账彻底与 .mo-cny-input 对齐
+// ⚡ 核心修复 1：全面升格为 parseFloat 浮点数计算，完美支持 114.68 运算
 window.calculateFormTotalCnyActual = function() {
     let total = 0;
-    document.querySelectorAll(".mo-cny-input").forEach(input => { total += parseFloat(input.value) || 0; });
+    document.querySelectorAll(".mo-cny-input").forEach(input => { 
+        let rawVal = input.value.trim();
+        let val = parseFloat(rawVal) || 0; 
+        total += val;
+    });
     const el = document.getElementById("mo-total-cny-display-actual");
-    if(el) el.innerText = "¥" + total.toLocaleString();
+    if(el) el.innerText = "¥" + total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 };
 
 window.addItemRowToFormActualDynamic = function() {
@@ -288,7 +292,7 @@ window.closeOrderFormModalActual = function() {
 };
 
 // =========================================================
-// 💾 数据保存吞吐中心 (严格校准 2：读取对齐所有 mo- 选择器类名)
+// 💾 数据保存吞吐中心 (安全清洗、强防 NaN)
 // =========================================================
 window.submitOrderFormActualAction = async function(editIndex) {
     const isEdit = editIndex !== null;
@@ -300,12 +304,11 @@ window.submitOrderFormActualAction = async function(editIndex) {
     const itemsList = [];
     let isFormValid = true;
 
-    // ⚡ 核心对齐修复：精准通过 .mo-item-row-actual 循环并读取内部子选择器
     document.querySelectorAll(".mo-item-row-actual").forEach(row => {
         const name = row.querySelector(".mo-name-input").value.trim();
-        const cny = parseFloat(row.querySelector(".mo-cny-input").value) || 0;
+        // ⚡ 核心修复 2：获取时也无缝同步为 parseFloat 高精度浮点洗涤
+        const cny = parseFloat(row.querySelector(".mo-cny-input").value.trim()) || 0;
         
-        // 只要名字为空或者本金不大于 0，直接打上失效标签触发拦截锁
         if(!name || cny <= 0) isFormValid = false;
 
         itemsList.push({
@@ -319,7 +322,7 @@ window.submitOrderFormActualAction = async function(editIndex) {
     });
 
     if(!isFormValid || itemsList.length === 0) {
-        alert(isZh ? "❌ 请完整填写商品名称与代垫本金金额！" : "Vui lòng điền đủ thông tin tên sản phẩm và số vốn!");
+        alert(isZh ? "❌ 请完整填写商品名称与代垫本金金额！" : "Vui lòng điền đủ thông tin!");
         return;
     }
 
