@@ -1,5 +1,5 @@
 // =========================================================
-// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (快捷批量控盘完全体)
+// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (快捷单号直填完全体)
 // =========================================================
 
 function renderOrders() {
@@ -375,7 +375,7 @@ window.submitOrderFormActualAction = async function(editIndex) {
 };
 
 // =========================================================
-// 🔄 📱 核心升格：满血高频快捷状态操控中心控制台 
+// 🔄 📱 核心升格：满血高频快捷状态操控中心控制台 (含单号直填极速引擎)
 // =========================================================
 window.openOrderDetailModalForManage = function(index) {
     const existManage = document.getElementById("order-manage-modal");
@@ -387,13 +387,13 @@ window.openOrderDetailModalForManage = function(index) {
     let customerName = ord.customer || "未知买家";
     if (customerName.startsWith("CUST-CUST-")) customerName = customerName.replace("CUST-CUST-", "");
 
-    // ⚡ 1. 动态抓取包裹内的多散件多单号明细列表
     let actualItems = ord.items;
     if (typeof actualItems === "string") {
         try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
     }
     actualItems = actualItems || [];
 
+    // ⚡ 1. 核心信息重塑：单件商品列表内嵌极速“单号直填输入框”及“一击保存锁”
     let subItemsStatusRowsHTML = "";
     actualItems.forEach((item, itemIdx) => {
         let statusBadgeClass = "bg-slate-100 text-slate-600";
@@ -402,21 +402,42 @@ window.openOrderDetailModalForManage = function(index) {
         if (item.status === "买家已完成收货") statusBadgeClass = "bg-emerald-50 text-emerald-600 border border-emerald-200/60";
         if (item.status === "已取消") statusBadgeClass = "bg-rose-50 text-rose-500 line-through";
 
-        // 点击商品散件行，可以直接独立循环切换该单品的状态（多物流单号分批精细控盘）
         subItemsStatusRowsHTML += `
-            <div onclick="toggleSingleItemStatusInModal(${index}, ${itemIdx})" class="flex justify-between items-center bg-slate-50 active:bg-slate-100 p-2.5 rounded-xl border border-slate-100/80 transition-all cursor-pointer">
-                <div class="space-y-0.5 max-w-[70%]">
-                    <div class="text-[11px] font-black text-slate-800 truncate">[${item.platform || '淘宝'}] ${item.name}</div>
-                    <div class="text-[10px] text-slate-400 font-mono truncate"><i class="fa-solid fa-truck-ramp-box text-[9px]"></i> ${item.track || (isZh ? '暂无单号' : 'Chưa có mã')} (${item.express_company || '中通'})</div>
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 space-y-3 relative animate-fadeIn">
+                <div class="flex justify-between items-start gap-2">
+                    <div class="text-[11px] font-black text-slate-800 leading-tight break-all flex-grow pl-0.5">
+                        <span class="text-slate-400 font-bold mr-1">[${item.platform || '淘宝'}]</span>${item.name}
+                    </div>
+                    <button type="button" onclick="toggleSingleItemStatusInModal(${index}, ${itemIdx})" class="text-[10px] font-black px-2 py-1 rounded-xl ${statusBadgeClass} shrink-0 active:scale-95 transition-all">
+                        ${item.status}
+                    </button>
                 </div>
-                <span class="text-[10px] font-black px-2 py-1 rounded-lg ${statusBadgeClass} shrink-0 transition-all">
-                    ${item.status}
-                </span>
+                
+                <div class="flex gap-1.5 items-center">
+                    <div class="relative flex-grow">
+                        <span class="absolute left-3 top-2.5 text-slate-400 text-[10px]"><i class="fa-solid fa-barcode"></i></span>
+                        <input type="text" id="fast-track-input-${index}-${itemIdx}" value="${item.track || ''}" 
+                            placeholder="${isZh ? '直接粘贴单号...' : 'Dán mã vận đơn...'}" 
+                            onblur="fastSaveSingleTrackAndCompany(${index}, ${itemIdx})"
+                            class="w-full bg-white border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-[11px] font-mono font-bold text-slate-700 focus:outline-none focus:border-indigo-500 transition-all">
+                    </div>
+                    
+                    <select id="fast-express-select-${index}-${itemIdx}" onchange="fastSaveSingleTrackAndCompany(${index}, ${itemIdx})"
+                        class="bg-white border border-slate-200 rounded-xl px-2 py-2 text-[10px] font-bold text-slate-600 focus:outline-none">
+                        <option value="中通" ${item.express_company === '中通' ? 'selected' : ''}>中通</option>
+                        <option value="圆通" ${item.express_company === '圆通' ? 'selected' : ''}>圆通</option>
+                        <option value="申通" ${item.express_company === '申通' ? 'selected' : ''}>申通</option>
+                        <option value="韵达" ${item.express_company === '韵达' ? 'selected' : ''}>韵达</option>
+                        <option value="顺丰" ${item.express_company === '顺丰' ? 'selected' : ''}>顺丰</option>
+                        <option value="极兔" ${item.express_company === '极兔' ? 'selected' : ''}>极兔</option>
+                        <option value="其他" ${item.express_company === '其他' ? 'selected' : ''}>其他</option>
+                    </select>
+                </div>
             </div>
         `;
     });
 
-    // ⚡ 2. 快捷按钮布局控制核心：点击后直接批量刷一整张单的所有快递和状态
+    // ⚡ 2. 快捷全单批量更新
     let fastButtonsConsoleHTML = "";
     if (ord.status !== "已取消") {
         fastButtonsConsoleHTML = `
@@ -470,7 +491,7 @@ window.openOrderDetailModalForManage = function(index) {
 
     const modalHTML = `
         <div id="order-manage-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-            <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100 my-auto animate-fadeIn p-5 space-y-4 max-h-[92vh] flex flex-col">
+            <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100 my-auto animate-fadeIn p-5 space-y-4 max-h-[94vh] flex flex-col">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-2 shrink-0">
                     <h3 class="text-xs font-black text-slate-800"><i class="fa-solid fa-sliders text-indigo-500"></i> ${isZh?'代购订单智能管理控制台':'Bảng điều khiển vận đơn'}</h3>
                     <button type="button" onclick="closeOrderModal()" class="text-slate-400 text-lg">✕</button>
@@ -484,8 +505,8 @@ window.openOrderDetailModalForManage = function(index) {
 
                 ${fastButtonsConsoleHTML}
 
-                <div class="grow overflow-y-auto space-y-2 py-1 pr-0.5 no-scrollbar">
-                    <label class="block text-[10px] text-slate-400 font-black tracking-wider uppercase">${isZh?'📦 包含商品明细 (点击单行独立循环改状态)':'📦 CHI TIẾT SẢN PHẨM (ẤN ĐỂ ĐỔI TRẠNG THÁI)'}</label>
+                <div class="grow overflow-y-auto space-y-3 py-1 pr-0.5 no-scrollbar">
+                    <label class="block text-[10px] text-slate-400 font-black tracking-wider uppercase">${isZh?'📦 包含商品明细 (可直接输入修改单号、点击右侧切状态)':'📦 CHI TIẾT SẢN PHẨM (NHẬP MÃ ĐƠN TẠI ĐÂY)'}</label>
                     ${subItemsStatusRowsHTML}
                 </div>
 
@@ -498,8 +519,63 @@ window.openOrderDetailModalForManage = function(index) {
 };
 
 // =========================================================
-// 🚀 核心组件功能 1：点击单行商品散件独立循环更新状态功能
+// 🚀 核心新接口：粘贴单号或失去焦点一瞬间，自动执行云端静默存盘
 // =========================================================
+window.fastSaveSingleTrackAndCompany = async function(orderIndex, itemIndex) {
+    const ord = window.ERP_STORE.orders[orderIndex];
+    const isZh = window.ERP_STORE.current_lang === "zh";
+
+    let actualItems = ord.items;
+    if (typeof actualItems === "string") {
+        try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
+    }
+    actualItems = actualItems || [];
+
+    // 获取当前卡片内输入框和选择框的最鲜活数据
+    const newTrack = document.getElementById(`fast-track-input-${orderIndex}-${itemIndex}`).value.trim();
+    const newCompany = document.getElementById(`fast-express-select-${orderIndex}-${itemIndex}`).value;
+
+    // 防重锁：如果数据压根没变，静默退场不做网络请求
+    if (actualItems[itemIndex].track === newTrack && actualItems[itemIndex].express_company === newCompany) {
+        return; 
+    }
+
+    // 覆盖内存
+    actualItems[itemIndex].track = newTrack;
+    actualItems[itemIndex].express_company = newCompany;
+
+    const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: ord.id,
+            customer: ord.customer,
+            buyer_vnd: ord.buyer_vnd || 0,
+            shipping_fee_cny: ord.shipping_fee_cny || 0,
+            items: actualItems
+        })
+    });
+
+    if (res.ok) {
+        ord.items = actualItems;
+        
+        // 悄悄洗涤底层大盘，不影响大盘展示
+        const mv = document.getElementById("main-view");
+        if(mv) {
+            const currentFilter = window.ERP_STORE.filter_status;
+            let filteredOrders = window.ERP_STORE.orders;
+            if (currentFilter !== null) {
+                filteredOrders = window.ERP_STORE.orders.filter(o => o.status === currentFilter);
+            } else {
+                filteredOrders = window.ERP_STORE.orders.filter(o => o.status !== "已取消");
+            }
+        }
+        showErpToast(isZh ? "⚡ 快递单号已实时自动存盘！" : "⚡ Đã lưu mã vận đơn thành công!");
+    } else {
+        showErpToast("D1 Save Track Error");
+    }
+};
+
 window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
     const ord = window.ERP_STORE.orders[orderIndex];
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -514,10 +590,8 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
     let currentIdx = statusLoop.indexOf(actualItems[itemIndex].status);
     let nextIdx = (currentIdx + 1) % statusLoop.length;
     
-    // 执行局部单品状态的向前迭代
     actualItems[itemIndex].status = statusLoop[nextIdx];
 
-    // 如果所有子件的状态都对齐了，联动修改订单大盘的整体 status 格子
     let allSame = true;
     for(let i=0; i<actualItems.length; i++) {
         if(actualItems[i].status !== actualItems[0].status) { allSame = false; break; }
@@ -547,12 +621,10 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
             });
         }
         
-        // 瞬间热刷新底层视窗大盘与当前的控制台
         const mv = document.getElementById("main-view");
         if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
         window.init_orders();
         
-        // 重新原地重绘控制台弹窗，让用户看到最新的高亮变化
         openOrderDetailModalForManage(orderIndex);
         showErpToast(isZh ? "⚡ 单品状态已完成局部流转！" : "⚡ Đã cập nhật trạng thái gói lẻ!");
     } else {
@@ -560,9 +632,6 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
     }
 };
 
-// =========================================================
-// 🚀 核心功能 2：点击快捷按钮直接全单全商品批量流转状态功能 
-// =========================================================
 window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetStatus) {
     const ord = window.ERP_STORE.orders[orderIndex];
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -573,7 +642,6 @@ window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetSta
     }
     actualItems = actualItems || [];
 
-    // 一键灌注，让订单下所有不同的中通、圆通包裹散件状态完全一致
     actualItems.forEach(item => item.status = targetStatus);
 
     const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
@@ -592,7 +660,6 @@ window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetSta
         ord.status = targetStatus;
         ord.items = actualItems;
 
-        // 向后端同步发射大盘状态同步信号
         await fetch(`${window.API_BASE_URL}/api/orders/update_status`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
