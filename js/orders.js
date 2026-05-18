@@ -1,5 +1,5 @@
 // =========================================================
-// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (最终商用大圆满版)
+// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (快捷批量控盘完全体)
 // =========================================================
 
 function renderOrders() {
@@ -147,7 +147,6 @@ window.openCreateOrderModalDirectly = function() {
 // 🔄 动态新建与修改大表单核心
 // =========================================================
 window.openOrderFormModal = function(editIndex = null) {
-    // 🛡️ 强力单例安全锁：打开前无条件清理残留的相同弹窗外壳
     const existModal = document.getElementById("order-form-modal");
     if(existModal) existModal.remove();
 
@@ -294,9 +293,6 @@ window.closeOrderFormModalActual = function() {
     if(m) m.remove();
 };
 
-// =========================================================
-// 💾 数据保存吞吐中心 (安全清洗、强制自动销毁弹窗)
-// =========================================================
 window.submitOrderFormActualAction = async function(editIndex) {
     const isEdit = editIndex !== null;
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -365,16 +361,13 @@ window.submitOrderFormActualAction = async function(editIndex) {
             window.ERP_STORE.orders.unshift(payload);
         }
 
-        // ⚡ 核心对齐修复：保存成功后，百分之百直接物理蒸发弹窗，拒绝留在屏幕上导致重复点击
         const activeFormModal = document.getElementById("order-form-modal");
         if(activeFormModal) activeFormModal.remove();
         
-        // ⚡ 重新热重绘大盘：列表秒级动态冲洗出全新行卡片
         const mv = document.getElementById("main-view");
         if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
         window.init_orders();
         
-        // ✨ 高级磨砂气泡淡出
         showErpToast(isZh ? "🎉 订单已成功存储入库！" : "🎉 Đã lưu đơn hàng thành công!");
     } else {
         showErpToast("D1 Save Connection Error");
@@ -382,10 +375,9 @@ window.submitOrderFormActualAction = async function(editIndex) {
 };
 
 // =========================================================
-// 🔄 深度管理独立控制台
+// 🔄 📱 核心升格：满血高频快捷状态操控中心控制台 
 // =========================================================
 window.openOrderDetailModalForManage = function(index) {
-    // 🛡️ 单例保护：打开前先清空老管理弹窗
     const existManage = document.getElementById("order-manage-modal");
     if(existManage) existManage.remove();
 
@@ -394,6 +386,59 @@ window.openOrderDetailModalForManage = function(index) {
     const orderIdTail = ord.id.split('-')[1] || ord.id;
     let customerName = ord.customer || "未知买家";
     if (customerName.startsWith("CUST-CUST-")) customerName = customerName.replace("CUST-CUST-", "");
+
+    // ⚡ 1. 动态抓取包裹内的多散件多单号明细列表
+    let actualItems = ord.items;
+    if (typeof actualItems === "string") {
+        try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
+    }
+    actualItems = actualItems || [];
+
+    let subItemsStatusRowsHTML = "";
+    actualItems.forEach((item, itemIdx) => {
+        let statusBadgeClass = "bg-slate-100 text-slate-600";
+        if (item.status === "集运仓已到货") statusBadgeClass = "bg-amber-50 text-amber-600 border border-amber-200/60";
+        if (item.status === "跨境清关运输中") statusBadgeClass = "bg-indigo-50 text-indigo-600 border border-indigo-200/60";
+        if (item.status === "买家已完成收货") statusBadgeClass = "bg-emerald-50 text-emerald-600 border border-emerald-200/60";
+        if (item.status === "已取消") statusBadgeClass = "bg-rose-50 text-rose-500 line-through";
+
+        // 点击商品散件行，可以直接独立循环切换该单品的状态（多物流单号分批精细控盘）
+        subItemsStatusRowsHTML += `
+            <div onclick="toggleSingleItemStatusInModal(${index}, ${itemIdx})" class="flex justify-between items-center bg-slate-50 active:bg-slate-100 p-2.5 rounded-xl border border-slate-100/80 transition-all cursor-pointer">
+                <div class="space-y-0.5 max-w-[70%]">
+                    <div class="text-[11px] font-black text-slate-800 truncate">[${item.platform || '淘宝'}] ${item.name}</div>
+                    <div class="text-[10px] text-slate-400 font-mono truncate"><i class="fa-solid fa-truck-ramp-box text-[9px]"></i> ${item.track || (isZh ? '暂无单号' : 'Chưa có mã')} (${item.express_company || '中通'})</div>
+                </div>
+                <span class="text-[10px] font-black px-2 py-1 rounded-lg ${statusBadgeClass} shrink-0 transition-all">
+                    ${item.status}
+                </span>
+            </div>
+        `;
+    });
+
+    // ⚡ 2. 快捷按钮布局控制核心：点击后直接批量刷一整张单的所有快递和状态
+    let fastButtonsConsoleHTML = "";
+    if (ord.status !== "已取消") {
+        fastButtonsConsoleHTML = `
+            <div class="space-y-2 pt-1">
+                <label class="block text-[10px] text-slate-400 font-black tracking-wider uppercase">${isZh ? '⚡ 快捷全单批量更新状态' : '⚡ CẬP NHẬT NHANH TOÀN BỘ ĐƠN'}</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" onclick="batchUpdateFullOrderStatusDirectly(${index}, '集运仓已到货')" class="bg-amber-500 text-white py-2.5 rounded-xl font-black text-xs shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5">
+                        <i class="fa-solid fa-warehouse text-sm"></i>
+                        <span>${isZh ? '已到仓' : 'Đến kho'}</span>
+                    </button>
+                    <button type="button" onclick="batchUpdateFullOrderStatusDirectly(${index}, '跨境清关运输中')" class="bg-indigo-600 text-white py-2.5 rounded-xl font-black text-xs shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5">
+                        <i class="fa-solid fa-truck-fast text-sm"></i>
+                        <span>${isZh ? '运输中' : 'Vận chuyển'}</span>
+                    </button>
+                    <button type="button" onclick="batchUpdateFullOrderStatusDirectly(${index}, '买家已完成收货')" class="bg-emerald-600 text-white py-2.5 rounded-xl font-black text-xs shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5">
+                        <i class="fa-solid fa-circle-check text-sm"></i>
+                        <span>${isZh ? '已签收' : 'Đã nhận'}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
 
     let dangerZoneHTML = "";
     if (ord.status === "已取消") {
@@ -407,15 +452,15 @@ window.openOrderDetailModalForManage = function(index) {
         `;
     } else {
         dangerZoneHTML = `
-            <div class="space-y-3 w-full">
-                <button type="button" onclick="closeOrderModal(); openOrderFormModal(${index});" class="w-full bg-slate-900 text-white py-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-sm">
-                    <i class="fa-solid fa-square-pen"></i> ${isZh ? '深度修改此单商品明细' : 'Sửa chi tiết sản phẩm'}
+            <div class="space-y-3 w-full border-t border-slate-100 pt-3">
+                <button type="button" onclick="const activeM=document.getElementById('order-manage-modal'); if(activeM)activeM.remove(); openOrderFormModal(${index});" class="w-full bg-slate-900 text-white py-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-sm active:bg-slate-800">
+                    <i class="fa-solid fa-square-pen"></i> ${isZh ? '进入具体订单修改金额明细' : 'Sửa chi tiết / Số tiền'}
                 </button>
-                <div class="flex gap-2 pt-1">
-                    <button type="button" onclick="toggleOrderCancelStatus(${index}, true)" class="w-1/2 bg-slate-100 text-slate-500 py-2.5 rounded-xl font-bold text-xs">
+                <div class="flex gap-2">
+                    <button type="button" onclick="toggleOrderCancelStatus(${index}, true)" class="w-1/2 bg-slate-100 text-slate-500 py-2.5 rounded-xl font-bold text-xs active:bg-slate-200">
                         <i class="fa-solid fa-ban text-rose-500"></i> ${isZh ? '客户整单取消' : 'Hủy toàn bộ đơn'}
                     </button>
-                    <button type="button" onclick="triggerUltimateDeleteOrder('${ord.id}', '${orderIdTail}', ${index})" class="w-1/2 bg-rose-50 text-rose-600 py-2.5 rounded-xl font-black text-xs border border-rose-100">
+                    <button type="button" onclick="triggerUltimateDeleteOrder('${ord.id}', '${orderIdTail}', ${index})" class="w-1/2 bg-rose-50 text-rose-600 py-2.5 rounded-xl font-black text-xs border border-rose-100 active:bg-rose-100">
                         <i class="fa-regular fa-trash-can"></i> ${isZh ? '彻底粉碎该单' : 'Xóa vĩnh viễn'}
                     </button>
                 </div>
@@ -425,24 +470,144 @@ window.openOrderDetailModalForManage = function(index) {
 
     const modalHTML = `
         <div id="order-manage-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-            <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100 my-auto animate-fadeIn p-5 space-y-4">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                    <h3 class="text-xs font-black text-slate-800"><i class="fa-solid fa-sliders text-indigo-500"></i> ${isZh?'代购订单深度管理控制台':'Quản lý vận đơn'}</h3>
+            <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100 my-auto animate-fadeIn p-5 space-y-4 max-h-[92vh] flex flex-col">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2 shrink-0">
+                    <h3 class="text-xs font-black text-slate-800"><i class="fa-solid fa-sliders text-indigo-500"></i> ${isZh?'代购订单智能管理控制台':'Bảng điều khiển vận đơn'}</h3>
                     <button type="button" onclick="closeOrderModal()" class="text-slate-400 text-lg">✕</button>
                 </div>
                 
-                <div class="text-xs space-y-1 bg-slate-50 p-3 rounded-xl font-bold text-slate-600">
-                    <div><span class="text-slate-400">${isZh?'买家业主':'Khách hàng'}:</span> <span class="font-black text-slate-800">${customerName}</span></div>
-                    <div><span class="text-slate-400">${isZh?'单号ID':'Mã đơn'}:</span> <span class="font-mono text-slate-700">${ord.id}</span></div>
-                    <div><span class="text-slate-400">${isZh?'当前状态':'Trạng thái'}:</span> <span class="font-mono font-black text-indigo-600">${ord.status || '等待国内发货'}</span></div>
+                <div class="text-xs grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl font-bold text-slate-600 shrink-0">
+                    <div><span class="text-slate-400 text-[10px] block">${isZh?'买家':'Khách hàng'}</span> <span class="font-black text-slate-800 text-sm">${customerName}</span></div>
+                    <div class="text-right"><span class="text-slate-400 text-[10px] block">${isZh?'当前订单状态':'Trạng thái đơn'}</span> <span class="font-black text-indigo-600 text-sm">${ord.status || '等待国内发货'}</span></div>
+                    <div class="col-span-2 text-[10px] text-slate-400 font-mono border-t border-slate-200/50 pt-1 mt-0.5">ID: ${ord.id}</div>
                 </div>
 
-                <div class="flex w-full">${dangerZoneHTML}</div>
+                ${fastButtonsConsoleHTML}
+
+                <div class="grow overflow-y-auto space-y-2 py-1 pr-0.5 no-scrollbar">
+                    <label class="block text-[10px] text-slate-400 font-black tracking-wider uppercase">${isZh?'📦 包含商品明细 (点击单行独立循环改状态)':'📦 CHI TIẾT SẢN PHẨM (ẤN ĐỂ ĐỔI TRẠNG THÁI)'}</label>
+                    ${subItemsStatusRowsHTML}
+                </div>
+
+                <div class="shrink-0">${dangerZoneHTML}</div>
             </div>
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     if(window.pushModalHistoryState) window.pushModalHistoryState("order-manage-modal");
+};
+
+// =========================================================
+// 🚀 核心组件功能 1：点击单行商品散件独立循环更新状态功能
+// =========================================================
+window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
+    const ord = window.ERP_STORE.orders[orderIndex];
+    const isZh = window.ERP_STORE.current_lang === "zh";
+    
+    let actualItems = ord.items;
+    if (typeof actualItems === "string") {
+        try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
+    }
+    actualItems = actualItems || [];
+
+    const statusLoop = ["等待国内发货", "集运仓已到货", "跨境清关运输中", "买家已完成收货"];
+    let currentIdx = statusLoop.indexOf(actualItems[itemIndex].status);
+    let nextIdx = (currentIdx + 1) % statusLoop.length;
+    
+    // 执行局部单品状态的向前迭代
+    actualItems[itemIndex].status = statusLoop[nextIdx];
+
+    // 如果所有子件的状态都对齐了，联动修改订单大盘的整体 status 格子
+    let allSame = true;
+    for(let i=0; i<actualItems.length; i++) {
+        if(actualItems[i].status !== actualItems[0].status) { allSame = false; break; }
+    }
+    let nextOrderGlobalStatus = allSame ? actualItems[0].status : ord.status;
+
+    const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: ord.id,
+            customer: ord.customer,
+            buyer_vnd: ord.buyer_vnd || 0,
+            shipping_fee_cny: ord.shipping_fee_cny || 0,
+            items: actualItems
+        })
+    });
+
+    if (res.ok) {
+        ord.items = actualItems;
+        if(allSame && ord.status !== nextOrderGlobalStatus) {
+            ord.status = nextOrderGlobalStatus;
+            await fetch(`${window.API_BASE_URL}/api/orders/update_status`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: ord.id, status: nextOrderGlobalStatus })
+            });
+        }
+        
+        // 瞬间热刷新底层视窗大盘与当前的控制台
+        const mv = document.getElementById("main-view");
+        if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
+        window.init_orders();
+        
+        // 重新原地重绘控制台弹窗，让用户看到最新的高亮变化
+        openOrderDetailModalForManage(orderIndex);
+        showErpToast(isZh ? "⚡ 单品状态已完成局部流转！" : "⚡ Đã cập nhật trạng thái gói lẻ!");
+    } else {
+        showErpToast("D1 Connection Error");
+    }
+};
+
+// =========================================================
+// 🚀 核心功能 2：点击快捷按钮直接全单全商品批量流转状态功能 
+// =========================================================
+window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetStatus) {
+    const ord = window.ERP_STORE.orders[orderIndex];
+    const isZh = window.ERP_STORE.current_lang === "zh";
+
+    let actualItems = ord.items;
+    if (typeof actualItems === "string") {
+        try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
+    }
+    actualItems = actualItems || [];
+
+    // 一键灌注，让订单下所有不同的中通、圆通包裹散件状态完全一致
+    actualItems.forEach(item => item.status = targetStatus);
+
+    const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: ord.id,
+            customer: ord.customer,
+            buyer_vnd: ord.buyer_vnd || 0,
+            shipping_fee_cny: ord.shipping_fee_cny || 0,
+            items: actualItems
+        })
+    });
+
+    if (res.ok) {
+        ord.status = targetStatus;
+        ord.items = actualItems;
+
+        // 向后端同步发射大盘状态同步信号
+        await fetch(`${window.API_BASE_URL}/api/orders/update_status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: ord.id, status: targetStatus })
+        });
+
+        const mv = document.getElementById("main-view");
+        if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
+        window.init_orders();
+
+        openOrderDetailModalForManage(orderIndex);
+        showErpToast(isZh ? "🎉 全包裹状态已一键同步流转！" : "🎉 Đã cập nhật đồng bộ toàn bộ đơn!");
+    } else {
+        showErpToast("D1 Connection Error");
+    }
 };
 
 window.toggleOrderCancelStatus = async function(index, shouldCancel) {
@@ -527,9 +692,6 @@ window.closeOrderModal = function() {
     if(m) m.remove();
 };
 
-// =========================================================
-// ✨ 辅助 H5 组件：高级自适应无感淡出气泡 (Toast)
-// =========================================================
 function showErpToast(message) {
     const oldToast = document.getElementById("erp-runtime-toast");
     if(oldToast) oldToast.remove();
