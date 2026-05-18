@@ -40,7 +40,7 @@ window.renderOrders = function() {
         }
         actualItems = actualItems || [];
 
-        if (currentFilter === "已取消") {
+        if (currentFilter === "Spacer" || currentFilter === "已取消") {
             return ord.status === "已取消";
         }
         if (ord.status === "已取消") return false;
@@ -156,7 +156,7 @@ window.renderOrders = function() {
 
     return `
         <div class="space-y-4 w-full max-w-md mx-auto pb-12">
-            <button id="btn-trigger-add-order" onclick="openCreateOrderModalDirectly()" class="w-full bg-indigo-600 text-white py-3.5 rounded-2xl text-xs font-black shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all">
+            <button id="btn-trigger-add-order" onclick="window.openCreateOrderModalDirectly()" class="w-full bg-indigo-600 text-white py-3.5 rounded-2xl text-xs font-black shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all">
                 <i class="fa-solid fa-cart-plus"></i> ${isZh ? '新建中越合并代购订单' : 'Tạo đơn hàng mới'}
             </button>
             
@@ -794,6 +794,11 @@ window.triggerUltimateDeleteOrder = function(orderId, tail, index) {
     } else if (userInput !== null) {
         showErpToast(isZh ? "❌ 尾号校验失败！" : "❌ Sai mã xác nhận!");
     }
+};
+
+window.closeOrderFormModalActual = function() {
+    const m = document.getElementById("order-form-modal");
+    if(m) m.remove();
 };
 
 window.closeOrderModal = function() {
