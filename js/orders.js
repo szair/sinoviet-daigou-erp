@@ -1,4 +1,4 @@
-function renderOrders() {
+window.renderOrders = function() {
     const isZh = window.ERP_STORE.current_lang === "zh";
     
     if (window.ERP_STORE.filter_status === undefined) {
@@ -43,8 +43,7 @@ function renderOrders() {
         if (currentFilter === "已取消") {
             return ord.status === "已取消";
         }
-        
-        if (ord.status === "Alice" || ord.status === "已取消") return false;
+        if (ord.status === "已取消") return false;
         if (currentFilter === null) return true;
 
         let hasUnshipped = false;
@@ -170,24 +169,24 @@ function renderOrders() {
             </div>
         </div>
     `;
-}
+};
 
 window.filterOrdersByStatus = function(status) {
     window.ERP_STORE.filter_status = status;
     const mv = document.getElementById("main-view");
-    if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
+    if(mv) mv.innerHTML = `<div class="view-section">${window.renderOrders()}</div>`;
 };
 
 window.init_orders = function() {
     const btn = document.getElementById("btn-trigger-add-order");
     if(btn) {
-        btn.removeEventListener("click", openCreateOrderModalDirectly);
-        btn.addEventListener("click", openCreateOrderModalDirectly);
+        btn.removeEventListener("click", window.openCreateOrderModalDirectly);
+        btn.addEventListener("click", window.openCreateOrderModalDirectly);
     }
 };
 
 window.openCreateOrderModalDirectly = function() {
-    openOrderFormModal(null);
+    window.openOrderFormModal(null);
 };
 
 window.openOrderFormModal = function(editIndex = null) {
@@ -212,10 +211,10 @@ window.openOrderFormModal = function(editIndex = null) {
 
     if (isEdit && actualItems.length > 0) {
         actualItems.forEach((item) => {
-            itemsFormHTML += createPlatformItemRowTemplate(item.platform, item.name, item.cny, item.track, item.status, item.express_company);
+            itemsFormHTML += window.createPlatformItemRowTemplate(item.platform, item.name, item.cny, item.track, item.status, item.express_company);
         });
     } else {
-        itemsFormHTML += createPlatformItemRowTemplate("淘宝", "", "", "", "等待国内发货", "中通");
+        itemsFormHTML += window.createPlatformItemRowTemplate("淘宝", "", "", "", "等待国内发货", "中通");
     }
 
     const modalHTML = `
@@ -223,7 +222,7 @@ window.openOrderFormModal = function(editIndex = null) {
             <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100 max-h-[85vh] flex flex-col animate-fadeIn">
                 <div class="flex justify-between items-center border-b border-slate-100 p-4 shrink-0">
                     <h3 class="text-xs font-black text-slate-800"><i class="fa-solid fa-cart-plus text-indigo-500"></i> ${isEdit ? (isZh?'修改合并代购订单':'Chỉnh sửa đơn hàng') : (isZh?'创建新代购订单':'Thêm đơn hàng mới')}</h3>
-                    <button type="button" onclick="closeOrderFormModalActual()" class="text-slate-400 text-lg">✕</button>
+                    <button type="button" onclick="window.closeOrderFormModalActual()" class="text-slate-400 text-lg">✕</button>
                 </div>
                 <form id="add-order-form-actual" class="p-4 space-y-4 overflow-y-auto grow text-xs font-bold text-slate-600">
                     <div>
@@ -235,7 +234,7 @@ window.openOrderFormModal = function(editIndex = null) {
                     <div class="space-y-2">
                         <div class="flex justify-between items-center">
                             <label class="text-slate-400">${isZh?'采购商品明细':'Danh sách sản phẩm'}</label>
-                            <button type="button" onclick="addItemRowToFormActualDynamic()" class="text-indigo-600 font-black flex items-center gap-1 text-[11px]"><i class="fa-solid fa-circle-plus"></i> ${isZh?'增加一件商品':'Thêm hàng'}</button>
+                            <button type="button" onclick="window.addItemRowToFormActualDynamic()" class="text-indigo-600 font-black flex items-center gap-1 text-[11px]"><i class="fa-solid fa-circle-plus"></i> ${isZh?'增加一件商品':'Thêm hàng'}</button>
                         </div>
                         <div id="mo-items-container-actual" class="space-y-3">
                             ${itemsFormHTML}
@@ -253,18 +252,18 @@ window.openOrderFormModal = function(editIndex = null) {
                     </div>
                 </form>
                 <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-2 shrink-0">
-                    <button type="button" onclick="closeOrderFormModalActual()" class="w-1/4 bg-white border border-slate-200 text-slate-500 py-3 rounded-xl font-bold">${isZh?'取消':'Hủy'}</button>
-                    <button type="button" onclick="submitOrderFormActualAction(${editIndex})" class="flex-grow bg-indigo-600 text-white py-3 rounded-xl font-black shadow-md active:scale-[0.98] transition-all">${isZh?'保存全部数据入库':'Lưu đơn hàng'}</button>
+                    <button type="button" onclick="window.closeOrderFormModalActual()" class="w-1/4 bg-white border border-slate-200 text-slate-500 py-3 rounded-xl font-bold">${isZh?'取消':'Hủy'}</button>
+                    <button type="button" onclick="window.submitOrderFormActualAction(${editIndex})" class="flex-grow bg-indigo-600 text-white py-3 rounded-xl font-black shadow-md active:scale-[0.98] transition-all">${isZh?'保存全部数据入库':'Lưu đơn hàng'}</button>
                 </div>
             </div>
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    calculateFormTotalCnyActual();
+    window.calculateFormTotalCnyActual();
     if(window.pushModalHistoryState) window.pushModalHistoryState("order-form-modal");
 };
 
-function createPlatformItemRowTemplate(platform, name, cny, track, status, expressCompany = "中通") {
+window.createPlatformItemRowTemplate = function(platform, name, cny, track, status, expressCompany = "中通") {
     const pOpts = ["淘宝", "1688", "拼多多", "咸鱼", "其他"].map(p => `<option value="${p}" ${platform === p ? 'selected' : ''}>${p}</option>`).join("");
     const isZh = window.ERP_STORE.current_lang === "zh";
     const expressCompanies = ["中通", "圆通", "申通", "韵达", "顺丰", "极兔", "邮政", "京东"];
@@ -279,7 +278,7 @@ function createPlatformItemRowTemplate(platform, name, cny, track, status, expre
 
     return `
         <div class="mo-item-row-actual bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2 relative pt-7">
-            <button type="button" onclick="removeItemRowFromFormActual(this)" class="absolute top-2 right-3 text-rose-500 font-bold text-xs">✕ ${isZh?'删除':'Xóa'}</button>
+            <button type="button" onclick="window.removeItemRowFromFormActual(this)" class="absolute top-2 right-3 text-rose-500 font-bold text-xs">✕ ${isZh?'删除':'Xóa'}</button>
             <div class="flex gap-1.5">
                 <select class="mo-platform-select bg-white border border-slate-200 rounded-xl p-2 font-bold text-slate-700 w-1/3">${pOpts}</select>
                 <input type="text" class="mo-name-input bg-white border border-slate-200 rounded-xl p-2 font-bold flex-grow" value="${name}" placeholder="${isZh?'商品名称':'Tên sản phẩm'}" required>
@@ -287,7 +286,7 @@ function createPlatformItemRowTemplate(platform, name, cny, track, status, expre
             <div class="grid grid-cols-2 gap-1.5">
                 <div class="relative">
                     <span class="absolute left-3 top-2 text-slate-400 font-mono">¥</span>
-                    <input type="number" step="any" class="mo-cny-input w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2 py-2 text-right font-mono font-bold text-slate-700" value="${cny}" placeholder="${isZh?'本金':'Vốn'}" oninput="calculateFormTotalCnyActual()" onblur="calculateFormTotalCnyActual()" onchange="calculateFormTotalCnyActual()" required>
+                    <input type="number" step="any" class="mo-cny-input w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2 py-2 text-right font-mono font-bold text-slate-700" value="${cny}" placeholder="${isZh?'本金':'Vốn'}" oninput="window.calculateFormTotalCnyActual()" onblur="window.calculateFormTotalCnyActual()" onchange="window.calculateFormTotalCnyActual()" required>
                 </div>
                 <select class="mo-express-select bg-white border border-slate-200 rounded-xl p-2 font-bold text-slate-600">${expOpts}</select>
             </div>
@@ -297,7 +296,35 @@ function createPlatformItemRowTemplate(platform, name, cny, track, status, expre
             </div>
         </div>
     `;
-}
+};
+
+window.calculateFormTotalCnyActual = function() {
+    let total = 0;
+    document.querySelectorAll(".mo-cny-input").forEach(input => { 
+        let rawVal = input.value.trim();
+        let val = parseFloat(rawVal) || 0; 
+        total += val;
+    });
+    const el = document.getElementById("mo-total-cny-display-actual");
+    if(el) el.innerText = "¥" + total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+};
+
+window.addItemRowToFormActualDynamic = function() {
+    const container = document.getElementById("mo-items-container-actual");
+    if(container) {
+        container.insertAdjacentHTML('beforeend', window.createPlatformItemRowTemplate("淘宝", "", "", "", "等待国内发货", "中通"));
+    }
+};
+
+window.removeItemRowFromFormActual = function(btn) {
+    const container = document.getElementById("mo-items-container-actual");
+    if(container && container.querySelectorAll(".mo-item-row-actual").length > 1) {
+        btn.closest(".mo-item-row-actual").remove();
+        window.calculateFormTotalCnyActual();
+    } else {
+        alert(window.ERP_STORE.current_lang === "zh" ? "⚠️ 至少保留一项商品明细" : "Phải giữ lại ít nhất 1 mặt hàng");
+    }
+};
 
 window.submitOrderFormActualAction = async function(editIndex) {
     const isEdit = editIndex !== null;
@@ -382,7 +409,7 @@ window.submitOrderFormActualAction = async function(editIndex) {
         if(activeFormModal) activeFormModal.remove();
         
         const mv = document.getElementById("main-view");
-        if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
+        if(mv) mv.innerHTML = `<div class="view-section">${window.renderOrders()}</div>`;
         window.init_orders();
         
         showErpToast(isZh ? "🎉 订单已成功存储入库！" : "🎉 Đã lưu đơn hàng thành công!");
@@ -421,7 +448,7 @@ window.openOrderDetailModalForManage = function(index) {
                     <div class="text-[11px] font-black text-slate-800 leading-tight break-all flex-grow pl-0.5">
                         <span class="text-slate-400 font-bold mr-1">[${item.platform || '淘宝'}]</span>${item.name}
                     </div>
-                    <button type="button" onclick="toggleSingleItemStatusInModal(${index}, ${itemIdx})" class="text-[10px] font-black px-2 py-1 rounded-xl ${statusBadgeClass} shrink-0 active:scale-95 transition-all">
+                    <button type="button" onclick="window.toggleSingleItemStatusInModal(${index}, ${itemIdx})" class="text-[10px] font-black px-2 py-1 rounded-xl ${statusBadgeClass} shrink-0 active:scale-95 transition-all">
                         ${item.status}
                     </button>
                 </div>
@@ -430,10 +457,10 @@ window.openOrderDetailModalForManage = function(index) {
                         <span class="absolute left-3 top-2.5 text-slate-400 text-[10px]"><i class="fa-solid fa-barcode"></i></span>
                         <input type="text" id="fast-track-input-${index}-${itemIdx}" value="${item.track || ''}" 
                             placeholder="${isZh ? '直接粘贴单号...' : 'Dán mã vận đơn...'}" 
-                            onblur="fastSaveSingleTrackAndCompany(${index}, ${itemIdx})"
+                            onblur="window.fastSaveSingleTrackAndCompany(${index}, ${itemIdx})"
                             class="w-full bg-white border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-[11px] font-mono font-bold text-slate-700 focus:outline-none focus:border-indigo-500 transition-all">
                     </div>
-                    <select id="fast-express-select-${index}-${itemIdx}" onchange="fastSaveSingleTrackAndCompany(${index}, ${itemIdx})"
+                    <select id="fast-express-select-${index}-${itemIdx}" onchange="window.fastSaveSingleTrackAndCompany(${index}, ${itemIdx})"
                         class="bg-white border border-slate-200 rounded-xl px-2 py-2 text-[10px] font-bold text-slate-600 focus:outline-none">
                         <option value="中通" ${item.express_company === '中通' ? 'selected' : ''}>中通</option>
                         <option value="圆通" ${item.express_company === '圆通' ? 'selected' : ''}>圆通</option>
@@ -454,15 +481,15 @@ window.openOrderDetailModalForManage = function(index) {
             <div class="space-y-2 pt-1">
                 <label class="block text-[10px] text-slate-400 font-black tracking-wider uppercase">${isZh ? '⚡ 快捷全单批量更新状态' : '⚡ CẬP NHẬT NHANH TOÀN BỘ ĐƠN'}</label>
                 <div class="grid grid-cols-3 gap-2">
-                    <button type="button" onclick="batchUpdateFullOrderStatusDirectly(${index}, '集运仓已到货')" class="bg-amber-500 text-white py-2.5 rounded-xl font-black text-xs shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5">
+                    <button type="button" onclick="window.batchUpdateFullOrderStatusDirectly(${index}, '集运仓已到货')" class="bg-amber-500 text-white py-2.5 rounded-xl font-black text-xs shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5">
                         <i class="fa-solid fa-warehouse text-sm"></i>
                         <span>${isZh ? '已到仓' : 'Đến kho'}</span>
                     </button>
-                    <button type="button" onclick="batchUpdateFullOrderStatusDirectly(${index}, '跨境清关运输中')" class="bg-indigo-600 text-white py-2.5 rounded-xl font-black text-xs shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5">
+                    <button type="button" onclick="window.batchUpdateFullOrderStatusDirectly(${index}, '跨境清关运输中')" class="bg-indigo-600 text-white py-2.5 rounded-xl font-black text-xs shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5">
                         <i class="fa-solid fa-truck-fast text-sm"></i>
                         <span>${isZh ? '运输中' : 'Vận chuyển'}</span>
                     </button>
-                    <button type="button" onclick="batchUpdateFullOrderStatusDirectly(${index}, '买家已完成收货')" class="bg-emerald-600 text-white py-2.5 rounded-xl font-black text-xs shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5">
+                    <button type="button" onclick="window.batchUpdateFullOrderStatusDirectly(${index}, '买家已完成收货')" class="bg-emerald-600 text-white py-2.5 rounded-xl font-black text-xs shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5">
                         <i class="fa-solid fa-circle-check text-sm"></i>
                         <span>${isZh ? '已签收' : 'Đã nhận'}</span>
                     </button>
@@ -476,7 +503,7 @@ window.openOrderDetailModalForManage = function(index) {
         dangerZoneHTML = `
             <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 text-center space-y-2 w-full">
                 <span class="text-[11px] font-black text-amber-700 block">⚠️ ${isZh ? '订单处于整单取消状态' : 'Đơn hàng này đã bị hủy'}</span>
-                <button type="button" onclick="toggleOrderCancelStatus(${index}, false)" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-xs shadow-sm">
+                <button type="button" onclick="window.toggleOrderCancelStatus(${index}, false)" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-xs shadow-sm">
                     <i class="fa-solid fa-rotate-left"></i> ${isZh ? '恢复此整单至正常代发货' : 'Khôi phục đơn hàng'}
                 </button>
             </div>
@@ -484,14 +511,14 @@ window.openOrderDetailModalForManage = function(index) {
     } else {
         dangerZoneHTML = `
             <div class="space-y-3 w-full border-t border-slate-100 pt-3">
-                <button type="button" onclick="const activeM=document.getElementById('order-manage-modal'); if(activeM)activeM.remove(); openOrderFormModal(${index});" class="w-full bg-slate-900 text-white py-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-sm active:bg-slate-800">
+                <button type="button" onclick="const activeM=document.getElementById('order-manage-modal'); if(activeM)activeM.remove(); window.openOrderFormModal(${index});" class="w-full bg-slate-900 text-white py-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-sm active:bg-slate-800">
                     <i class="fa-solid fa-square-pen"></i> ${isZh ? '进入具体订单修改金额明细' : 'Sửa chi tiết / Số tiền'}
                 </button>
                 <div class="flex gap-2">
-                    <button type="button" onclick="toggleOrderCancelStatus(${index}, true)" class="w-1/2 bg-slate-100 text-slate-500 py-2.5 rounded-xl font-bold text-xs active:bg-slate-200">
+                    <button type="button" onclick="window.toggleOrderCancelStatus(${index}, true)" class="w-1/2 bg-slate-100 text-slate-500 py-2.5 rounded-xl font-bold text-xs active:bg-slate-200">
                         <i class="fa-solid fa-ban text-rose-500"></i> ${isZh ? '客户整单取消' : 'Hủy toàn bộ đơn'}
                     </button>
-                    <button type="button" onclick="triggerUltimateDeleteOrder('${ord.id}', '${orderIdTail}', ${index})" class="w-1/2 bg-rose-50 text-rose-600 py-2.5 rounded-xl font-black text-xs border border-rose-100 active:bg-rose-100">
+                    <button type="button" onclick="window.triggerUltimateDeleteOrder('${ord.id}', '${orderIdTail}', ${index})" class="w-1/2 bg-rose-50 text-rose-600 py-2.5 rounded-xl font-black text-xs border border-rose-100 active:bg-rose-100">
                         <i class="fa-regular fa-trash-can"></i> ${isZh ? '彻底粉碎该单' : 'Xóa vĩnh viễn'}
                     </button>
                 </div>
@@ -510,7 +537,7 @@ window.openOrderDetailModalForManage = function(index) {
             <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100 my-auto animate-fadeIn p-5 space-y-4 max-h-[94vh] flex flex-col">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-2 shrink-0">
                     <h3 class="text-xs font-black text-slate-800"><i class="fa-solid fa-sliders text-indigo-500"></i> ${isZh?'代购订单智能管理控制台':'Bảng điều khiển vận đơn'}</h3>
-                    <button type="button" onclick="closeOrderModal()" class="text-slate-400 text-lg">✕</button>
+                    <button type="button" onclick="window.closeOrderModal()" class="text-slate-400 text-lg">✕</button>
                 </div>
                 <div class="text-xs grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl font-bold text-slate-600 shrink-0">
                     <div><span class="text-slate-400 text-[10px] block">${isZh?'买家':'Khách hàng'}</span> <span class="font-black text-slate-800 text-sm">${customerName}</span></div>
@@ -628,10 +655,10 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
         });
         
         const mv = document.getElementById("main-view");
-        if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
+        if(mv) mv.innerHTML = `<div class="view-section">${window.renderOrders()}</div>`;
         window.init_orders();
         
-        openOrderDetailModalForManage(orderIndex);
+        window.openOrderDetailModalForManage(orderIndex);
         showErpToast(isZh ? "⚡ 单品状态已完成局部流转！" : "⚡ Đã cập nhật trạng thái gói lẻ!");
     } else {
         showErpToast("D1 Connection Error");
@@ -681,10 +708,10 @@ window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetSta
         });
 
         const mv = document.getElementById("main-view");
-        if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
+        if(mv) mv.innerHTML = `<div class="view-section">${window.renderOrders()}</div>`;
         window.init_orders();
 
-        openOrderDetailModalForManage(orderIndex);
+        window.openOrderDetailModalForManage(orderIndex);
         showErpToast(isZh ? "🎉 全包裹状态已一键同步流转！" : "🎉 Đã cập nhật đồng bộ toàn bộ đơn!");
     } else {
         showErpToast("D1 Connection Error");
@@ -727,10 +754,10 @@ window.toggleOrderCancelStatus = async function(index, shouldCancel) {
             body: JSON.stringify({ id: ord.id, status: nextStatus })
         });
 
-        closeOrderModal();
+        window.closeOrderModal();
         
         const mv = document.getElementById("main-view");
-        if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
+        if(mv) mv.innerHTML = `<div class="view-section">${window.renderOrders()}</div>`;
         window.init_orders();
         
         showErpToast(isZh ? "🎉 订单状态已完成变动！" : "🎉 Cập nhật trạng thái thành công!");
@@ -755,10 +782,10 @@ window.triggerUltimateDeleteOrder = function(orderId, tail, index) {
         }).then(res => {
             if (res.ok) {
                 window.ERP_STORE.orders.splice(index, 1);
-                closeOrderModal();
+                window.closeOrderModal();
                 
                 const mv = document.getElementById("main-view");
-                if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
+                if(mv) mv.innerHTML = `<div class="view-section">${window.renderOrders()}</div>`;
                 window.init_orders();
                 
                 showErpToast(isZh ? "🗑️ 订单已被永久物理销毁。" : "🗑️ Đã xóa đơn hàng vĩnh viễn.");
