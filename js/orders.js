@@ -1,5 +1,5 @@
 // =========================================================
-// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (强制双重全量算账版)
+// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (最终大圆满完全体)
 // =========================================================
 
 function renderOrders() {
@@ -98,7 +98,7 @@ function renderOrders() {
 
                 <div class="flex justify-between items-center pt-2 text-xs">
                     <span class="text-slate-400 font-bold">${isZh?'整单内部本金':'Tổng tiền vốn'}:</span>
-                    <span class="font-mono font-black text-slate-900 text-sm">¥${totalCny.toLocaleString()}</span>
+                    <span class="font-mono font-black text-slate-900 text-sm">¥${totalCny.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                 </div>
             </div>
         `;
@@ -305,11 +305,9 @@ window.submitOrderFormActualAction = async function(editIndex) {
 
     document.querySelectorAll(".mo-item-row-actual").forEach(row => {
         const name = row.querySelector(".mo-name-input").value.trim();
-        // ⚡ 强力清洗：拿掉所有不可见符号，确保转出真实浮点数
         let rawCnyStr = row.querySelector(".mo-cny-input").value.toString().trim();
         const cny = parseFloat(rawCnyStr) || 0;
         
-        // 🛡️ 托底放行线：只要输入框里确实有字，比如有 114.68，哪怕实时由于键盘没响应卡在 0，这里也强制放行
         if(!name || (cny <= 0 && rawCnyStr === "")) {
             isFormValid = false;
         }
@@ -324,17 +322,15 @@ window.submitOrderFormActualAction = async function(editIndex) {
         });
     });
 
-    // ⚡ 强制二次验证过滤锁：如果此时前端因为某些神秘环境导致列表里有效数还卡在 0，我们在这里强制在提交前执行一次后门算账重刷
     let finalCheckTotal = 0;
     itemsList.forEach(it => finalCheckTotal += it.cny);
     
-    // 如果名字填了，后台真实抓到的数据和大于 0，强制把报错拦截砸碎，直接判定表单成功！
     if (finalCheckTotal > 0 && isFormValid === false) {
         isFormValid = true; 
     }
 
     if(!isFormValid || itemsList.length === 0 || finalCheckTotal <= 0) {
-        alert(isZh ? "❌ 请完整填写商品名称与代垫本金金额！" : "Vui lòng điền đủ thông tin!");
+        showErpToast(isZh ? "❌ 请完整填写商品名称与本金金额！" : "Vui lòng điền đủ thông tin!");
         return;
     }
 
@@ -370,9 +366,10 @@ window.submitOrderFormActualAction = async function(editIndex) {
         if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
         window.init_orders();
         
-        alert(isZh ? "🎉 订单已成功同步存储至 D1 数据库！" : "🎉 Đã lưu đơn hàng thành công!");
+        // ✨ H5 交互升格：使用自动淡出的高级气泡组件取代 alert 弹窗
+        showErpToast(isZh ? "🎉 订单已成功存储入库！" : "🎉 Đã lưu đơn hàng thành công!");
     } else {
-        alert("D1 Save Connection Error");
+        showErpToast("D1 Save Connection Error");
     }
 };
 
@@ -477,9 +474,9 @@ window.toggleOrderCancelStatus = async function(index, shouldCancel) {
         if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
         window.init_orders();
         
-        alert(isZh ? "🎉 订单状态已变动！" : "🎉 Cập nhật thành công!");
+        showErpToast(isZh ? "🎉 订单状态已完成变动！" : "🎉 Cập nhật trạng thái thành công!");
     } else {
-        alert("D1 Link Error");
+        showErpToast("D1 Link Error");
     }
 };
 
@@ -505,11 +502,11 @@ window.triggerUltimateDeleteOrder = function(orderId, tail, index) {
                 if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
                 window.init_orders();
                 
-                alert(isZh ? "🗑️ 订单已被永久物理销毁。" : "🗑️ Đã xóa đơn hàng vĩnh viễn.");
+                showErpToast(isZh ? "🗑️ 订单已被永久物理销毁。" : "🗑️ Đã xóa đơn hàng vĩnh viễn.");
             }
         });
     } else if (userInput !== null) {
-        alert(isZh ? "❌ 尾号校验失败！" : "❌ Sai mã xác nhận!");
+        showErpToast(isZh ? "❌ 尾号校验失败！" : "❌ Sai mã xác nhận!");
     }
 };
 
@@ -517,3 +514,34 @@ window.closeOrderModal = function() {
     const m = document.getElementById("order-manage-modal");
     if(m) m.remove();
 };
+
+// =========================================================
+// ✨ 辅助 H5 组件：高级自适应无感淡出气泡 (Toast)
+// =========================================================
+function showErpToast(message) {
+    const oldToast = document.getElementById("erp-runtime-toast");
+    if(oldToast) oldToast.remove();
+
+    const toastHTML = `
+        <div id="erp-runtime-toast" class="fixed top-12 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl text-xs font-black shadow-lg z-[99999] flex items-center gap-2 border border-slate-700/50 transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2">
+            <span>${message}</span>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', toastHTML);
+
+    const toast = document.getElementById("erp-runtime-toast");
+    setTimeout(() => {
+        if(toast) {
+            toast.classList.remove("opacity-0", "pointer-events-none", "-translate-y-2");
+            toast.classList.add("opacity-100", "translate-y-0");
+        }
+    }, 50);
+
+    setTimeout(() => {
+        if(toast) {
+            toast.classList.remove("opacity-100", "translate-y-0");
+            toast.classList.add("opacity-0", "-translate-y-2");
+            setTimeout(() => { toast.remove(); }, 300);
+        }
+    }, 1500);
+}
