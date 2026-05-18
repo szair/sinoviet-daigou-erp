@@ -1,5 +1,5 @@
 // =========================================================
-// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (快捷单号直填完全体)
+// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (最终全链路完美闭合版)
 // =========================================================
 
 function renderOrders() {
@@ -375,7 +375,7 @@ window.submitOrderFormActualAction = async function(editIndex) {
 };
 
 // =========================================================
-// 🔄 📱 核心升格：满血高频快捷状态操控中心控制台 (含单号直填极速引擎)
+// 🔄 📱 核心控制台面板
 // =========================================================
 window.openOrderDetailModalForManage = function(index) {
     const existManage = document.getElementById("order-manage-modal");
@@ -393,7 +393,6 @@ window.openOrderDetailModalForManage = function(index) {
     }
     actualItems = actualItems || [];
 
-    // ⚡ 1. 核心信息重塑：单件商品列表内嵌极速“单号直填输入框”及“一击保存锁”
     let subItemsStatusRowsHTML = "";
     actualItems.forEach((item, itemIdx) => {
         let statusBadgeClass = "bg-slate-100 text-slate-600";
@@ -437,7 +436,6 @@ window.openOrderDetailModalForManage = function(index) {
         `;
     });
 
-    // ⚡ 2. 快捷全单批量更新
     let fastButtonsConsoleHTML = "";
     if (ord.status !== "已取消") {
         fastButtonsConsoleHTML = `
@@ -519,7 +517,7 @@ window.openOrderDetailModalForManage = function(index) {
 };
 
 // =========================================================
-// 🚀 核心新接口：粘贴单号或失去焦点一瞬间，自动执行云端静默存盘
+// 🚀 核心组件功能 1：失去焦点或单号回车时的独立静默保存
 // =========================================================
 window.fastSaveSingleTrackAndCompany = async function(orderIndex, itemIndex) {
     const ord = window.ERP_STORE.orders[orderIndex];
@@ -531,16 +529,13 @@ window.fastSaveSingleTrackAndCompany = async function(orderIndex, itemIndex) {
     }
     actualItems = actualItems || [];
 
-    // 获取当前卡片内输入框和选择框的最鲜活数据
     const newTrack = document.getElementById(`fast-track-input-${orderIndex}-${itemIndex}`).value.trim();
     const newCompany = document.getElementById(`fast-express-select-${orderIndex}-${itemIndex}`).value;
 
-    // 防重锁：如果数据压根没变，静默退场不做网络请求
     if (actualItems[itemIndex].track === newTrack && actualItems[itemIndex].express_company === newCompany) {
         return; 
     }
 
-    // 覆盖内存
     actualItems[itemIndex].track = newTrack;
     actualItems[itemIndex].express_company = newCompany;
 
@@ -558,24 +553,15 @@ window.fastSaveSingleTrackAndCompany = async function(orderIndex, itemIndex) {
 
     if (res.ok) {
         ord.items = actualItems;
-        
-        // 悄悄洗涤底层大盘，不影响大盘展示
-        const mv = document.getElementById("main-view");
-        if(mv) {
-            const currentFilter = window.ERP_STORE.filter_status;
-            let filteredOrders = window.ERP_STORE.orders;
-            if (currentFilter !== null) {
-                filteredOrders = window.ERP_STORE.orders.filter(o => o.status === currentFilter);
-            } else {
-                filteredOrders = window.ERP_STORE.orders.filter(o => o.status !== "已取消");
-            }
-        }
         showErpToast(isZh ? "⚡ 快递单号已实时自动存盘！" : "⚡ Đã lưu mã vận đơn thành công!");
     } else {
         showErpToast("D1 Save Track Error");
     }
 };
 
+// =========================================================
+// 🚀 ⚡ 核心闭合防御：单散件切状态，逆向重写捕获，杜绝打字没存完的盲区！
+// =========================================================
 window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
     const ord = window.ERP_STORE.orders[orderIndex];
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -585,6 +571,14 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
         try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
     }
     actualItems = actualItems || [];
+
+    // 🛡️ 逆向捕获锁：强行扫除当前弹窗内用户刚才输入的所有最新单号和快递公司，封杀打字冲突
+    actualItems.forEach((item, idx) => {
+        const tInput = document.getElementById(`fast-track-input-${orderIndex}-${idx}`);
+        const cSelect = document.getElementById(`fast-express-select-${orderIndex}-${idx}`);
+        if(tInput) item.track = tInput.value.trim();
+        if(cSelect) item.express_company = cSelect.value;
+    });
 
     const statusLoop = ["等待国内发货", "集运仓已到货", "跨境清关运输中", "买家已完成收货"];
     let currentIdx = statusLoop.indexOf(actualItems[itemIndex].status);
@@ -632,6 +626,9 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
     }
 };
 
+// =========================================================
+// 🚀 ⚡ 核心闭合防御：全单批量刷状态，逆向重写捕获，单号绝不丢失！
+// =========================================================
 window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetStatus) {
     const ord = window.ERP_STORE.orders[orderIndex];
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -642,6 +639,15 @@ window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetSta
     }
     actualItems = actualItems || [];
 
+    // 🛡️ 逆向捕获锁：一键全单变动前，强制提取界面上的所有单号文字
+    actualItems.forEach((item, idx) => {
+        const tInput = document.getElementById(`fast-track-input-${orderIndex}-${idx}`);
+        const cSelect = document.getElementById(`fast-express-select-${orderIndex}-${idx}`);
+        if(tInput) item.track = tInput.value.trim();
+        if(cSelect) item.express_company = cSelect.value;
+    });
+
+    // 灌注批量状态
     actualItems.forEach(item => item.status = targetStatus);
 
     const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
