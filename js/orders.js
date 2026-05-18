@@ -1,5 +1,5 @@
 // =========================================================
-// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (最终大圆满完全体)
+// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (最终商用大圆满版)
 // =========================================================
 
 function renderOrders() {
@@ -147,6 +147,10 @@ window.openCreateOrderModalDirectly = function() {
 // 🔄 动态新建与修改大表单核心
 // =========================================================
 window.openOrderFormModal = function(editIndex = null) {
+    // 🛡️ 强力单例安全锁：打开前无条件清理残留的相同弹窗外壳
+    const existModal = document.getElementById("order-form-modal");
+    if(existModal) existModal.remove();
+
     const isEdit = editIndex !== null;
     const isZh = window.ERP_STORE.current_lang === "zh";
     const targetOrder = isEdit ? window.ERP_STORE.orders[editIndex] : { id: "", customer: "", buyer_vnd: 0, items: [] };
@@ -219,7 +223,7 @@ window.openOrderFormModal = function(editIndex = null) {
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     calculateFormTotalCnyActual();
-    window.pushModalHistoryState("order-form-modal");
+    if(window.pushModalHistoryState) window.pushModalHistoryState("order-form-modal");
 };
 
 function createPlatformItemRowTemplate(platform, name, cny, track, status, expressCompany = "中通") {
@@ -291,7 +295,7 @@ window.closeOrderFormModalActual = function() {
 };
 
 // =========================================================
-// 💾 数据保存吞吐中心 (安全清洗、强防 NaN)
+// 💾 数据保存吞吐中心 (安全清洗、强制自动销毁弹窗)
 // =========================================================
 window.submitOrderFormActualAction = async function(editIndex) {
     const isEdit = editIndex !== null;
@@ -360,13 +364,17 @@ window.submitOrderFormActualAction = async function(editIndex) {
             payload.status = "等待国内发货";
             window.ERP_STORE.orders.unshift(payload);
         }
-        closeOrderFormModalActual();
+
+        // ⚡ 核心对齐修复：保存成功后，百分之百直接物理蒸发弹窗，拒绝留在屏幕上导致重复点击
+        const activeFormModal = document.getElementById("order-form-modal");
+        if(activeFormModal) activeFormModal.remove();
         
+        // ⚡ 重新热重绘大盘：列表秒级动态冲洗出全新行卡片
         const mv = document.getElementById("main-view");
         if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
         window.init_orders();
         
-        // ✨ H5 交互升格：使用自动淡出的高级气泡组件取代 alert 弹窗
+        // ✨ 高级磨砂气泡淡出
         showErpToast(isZh ? "🎉 订单已成功存储入库！" : "🎉 Đã lưu đơn hàng thành công!");
     } else {
         showErpToast("D1 Save Connection Error");
@@ -377,6 +385,10 @@ window.submitOrderFormActualAction = async function(editIndex) {
 // 🔄 深度管理独立控制台
 // =========================================================
 window.openOrderDetailModalForManage = function(index) {
+    // 🛡️ 单例保护：打开前先清空老管理弹窗
+    const existManage = document.getElementById("order-manage-modal");
+    if(existManage) existManage.remove();
+
     const ord = window.ERP_STORE.orders[index];
     const isZh = window.ERP_STORE.current_lang === "zh";
     const orderIdTail = ord.id.split('-')[1] || ord.id;
@@ -430,7 +442,7 @@ window.openOrderDetailModalForManage = function(index) {
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    window.pushModalHistoryState("order-manage-modal");
+    if(window.pushModalHistoryState) window.pushModalHistoryState("order-manage-modal");
 };
 
 window.toggleOrderCancelStatus = async function(index, shouldCancel) {
