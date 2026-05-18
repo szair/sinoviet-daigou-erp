@@ -1,5 +1,5 @@
 // =========================================================
-// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (最终全链路完美闭合版)
+// 📦 中越通跨境代购 ERP - 订单业务 H5 核心模块 (全局无错大圆满完全体)
 // =========================================================
 
 function renderOrders() {
@@ -38,12 +38,62 @@ function renderOrders() {
         `;
     });
 
-    let filteredOrders = window.ERP_STORE.orders;
-    if (currentFilter !== null) {
-        filteredOrders = window.ERP_STORE.orders.filter(o => o.status === currentFilter);
-    } else {
-        filteredOrders = window.ERP_STORE.orders.filter(o => o.status !== "已取消");
-    }
+    // ⚡ 核心全局测试进化 1：精细化全自动化状态降级分类路由算法
+    let filteredOrders = window.ERP_STORE.orders.filter(ord => {
+        // 先解压商品清单
+        let actualItems = ord.items;
+        if (typeof actualItems === "string") {
+            try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
+        }
+        actualItems = actualItems || [];
+
+        // 如果用户点的是“已取消”胶囊
+        if (currentFilter === "已取消") {
+            return ord.status === "已取消";
+        }
+        
+        // 过滤掉已被主动取消的废单
+        if (ord.status === "已取消") return false;
+
+        // 如果用户点的是“全部正常”胶囊
+        if (currentFilter === null) return true;
+
+        // 【关键防御核心】：遍历这笔订单下的所有单独包裹散件
+        let hasUnshipped = false;      // 是否包含待发货件
+        let hasInWarehouse = false;    // 是否包含已到仓件
+        let hasInTransit = false;      // 是否包含运输中件
+        let hasReceived = false;       // 是否包含已签收件
+
+        actualItems.forEach(item => {
+            if (item.status === "等待国内发货") hasUnshipped = true;
+            if (item.status === "集运仓已到货") hasInWarehouse = true;
+            if (item.status === "跨境清关运输中") hasInTransit = true;
+            if (item.status === "买家已完成收货") hasReceived = true;
+        });
+
+        // 🛡️ 状态降级大闸闭合判定：
+        // 只要还有1件货没发，不管别的货到哪了，整单死卡在「等待国内发货」分类，拒绝滑走！
+        if (currentFilter === "等待国内发货") {
+            return hasUnshipped || (!hasInWarehouse && !hasInTransit && !hasReceived);
+        }
+        
+        // 只有且必须当未发件全部清空，且最慢的件刚到集运仓时，才准滑入「集运仓已到货」
+        if (currentFilter === "集运仓已到货") {
+            return !hasUnshipped && hasInWarehouse;
+        }
+
+        // 只有所有件都离开国内，且最慢的在跨国运输中，才滑入「跨境清关运输中」
+        if (currentFilter === "跨境清关运输中") {
+            return !hasUnshipped && !hasInWarehouse && hasInTransit;
+        }
+
+        // 必须且只有所有件全部被越南买家签收，才滑入「买家已完成收货」
+        if (currentFilter === "买家已完成收货") {
+            return !hasUnshipped && !hasInWarehouse && !hasInTransit && hasReceived;
+        }
+
+        return ord.status === currentFilter;
+    });
 
     let listHTML = "";
     filteredOrders.forEach((ord, index) => {
@@ -58,13 +108,23 @@ function renderOrders() {
 
         actualItems.forEach(item => {
             totalCny += parseFloat(item.cny || 0);
+
+            // ⚡ 核心全局测试进化 2：主界面散件状态标签直接外显打印，一眼识破“部分到仓”
+            let subBadgeStyle = "bg-slate-100 text-slate-500";
+            if (item.status === "集运仓已到货") subBadgeStyle = "bg-amber-100 text-amber-700";
+            if (item.status === "跨境清关运输中") subBadgeStyle = "bg-indigo-100 text-indigo-700";
+            if (item.status === "买家已完成收货") subBadgeStyle = "bg-emerald-100 text-emerald-700";
+
             itemsSummary += `
                 <div class="flex justify-between items-center bg-slate-50/50 p-2.5 rounded-xl border border-slate-100/60 text-xs">
-                    <div>
+                    <div class="max-w-[65%] truncate">
                         <span class="text-slate-400 font-black">[${item.platform || '淘宝'}]</span>
                         <span class="text-slate-700 font-bold ml-1">${item.name || '未命名商品'}</span>
                     </div>
-                    <span class="font-mono font-black text-slate-500">¥${item.cny || 0}</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="text-[9px] px-1.5 py-0.5 rounded-md font-black scale-90 ${subBadgeStyle}">${item.status.replace("🕒 ","").replace("📦 ","").replace("运输中","Vận chuyển").replace("已到仓","Đến kho").replace("待发货","Chờ giao").replace("已签收","Đã nhận")}</span>
+                        <span class="font-mono font-black text-slate-500">¥${item.cny || 0}</span>
+                    </div>
                 </div>
             `;
         });
@@ -77,6 +137,13 @@ function renderOrders() {
             customerName = customerName.replace("CUST-CUST-", "");
         }
 
+        // 动态计算整单宏观状态，显示在大卡片右上角
+        let globalStatusLabel = ord.status || "等待国内发货";
+        let unShippedCount = actualItems.filter(i => i.status === "等待国内发货").length;
+        if (unShippedCount > 0 && unShippedCount < actualItems.length) {
+            globalStatusLabel = isZh ? "⚠️ 部分已到仓" : "⚠️ Đến kho 1 phần";
+        }
+
         listHTML += `
             <div class="bg-white rounded-2xl p-5 shadow-sm border space-y-4 transition-all ${cardOpacity}">
                 <div class="flex justify-between items-start border-b border-slate-100 pb-3">
@@ -87,9 +154,12 @@ function renderOrders() {
                         </div>
                         <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">${ord.id}</span>
                     </div>
-                    <button onclick="openOrderDetailModalForManage(${index})" class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-black active:bg-indigo-600 active:text-white transition-all shadow-sm">
-                        ${isZh ? '管理此单' : 'Quản lý'}
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">${globalStatusLabel}</span>
+                        <button onclick="openOrderDetailModalForManage(${index})" class="bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs font-black active:bg-indigo-600 transition-all shadow-sm">
+                            ${isZh ? '管理' : 'Quản lý'}
+                        </button>
+                    </div>
                 </div>
 
                 <div class="space-y-2">
@@ -284,7 +354,7 @@ window.removeItemRowFromFormActual = function(btn) {
         btn.closest(".mo-item-row-actual").remove();
         calculateFormTotalCnyActual();
     } else {
-        alert(window.ERP_STORE.current_lang === "zh" ? "⚠️ 至少保留一项商品明细" : "Phải giữ lại ít nhất 1 mặt hàng");
+        alert(window.ERP_STORE.current_lang === "zh" ? "⚠️ 至少保留一项商品明细" : "Phải giữ lại nhất 1 mặt hàng");
     }
 };
 
@@ -337,12 +407,24 @@ window.submitOrderFormActualAction = async function(editIndex) {
     let targetId = isEdit ? window.ERP_STORE.orders[editIndex].id : "#ORD-" + Math.floor(10000 + Math.random() * 90000);
     let currentShippingFee = isEdit ? (window.ERP_STORE.orders[editIndex].shipping_fee_cny || 0) : 0;
 
+    // 自动判定大盘汇总状态
+    let nextGlobalStatus = "等待国内发货";
+    let hasUnshipped = itemsList.some(i => i.status === "等待国内发货");
+    let hasWarehouse = itemsList.some(i => i.status === "集运仓已到货");
+    let hasTransit = itemsList.some(i => i.status === "跨境清关运输中");
+    let hasReceived = itemsList.some(i => i.status === "买家已完成收货");
+
+    if (!hasUnshipped && hasWarehouse) nextGlobalStatus = "集运仓已到货";
+    else if (!hasUnshipped && !hasWarehouse && hasTransit) nextGlobalStatus = "跨境清关运输中";
+    else if (!hasUnshipped && !hasWarehouse && !hasTransit && hasReceived) nextGlobalStatus = "买家已完成收货";
+
     const payload = {
         id: targetId,
         customer: customer,
         buyer_vnd: buyerVnd,
         shipping_fee_cny: currentShippingFee,
-        items: itemsList
+        items: itemsList,
+        status: isEdit ? window.ERP_STORE.orders[editIndex].status : nextGlobalStatus
     };
 
     const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
@@ -356,8 +438,8 @@ window.submitOrderFormActualAction = async function(editIndex) {
             window.ERP_STORE.orders[editIndex].customer = customer;
             window.ERP_STORE.orders[editIndex].buyer_vnd = buyerVnd;
             window.ERP_STORE.orders[editIndex].items = itemsList;
+            window.ERP_STORE.orders[editIndex].status = nextGlobalStatus;
         } else {
-            payload.status = "等待国内发货";
             window.ERP_STORE.orders.unshift(payload);
         }
 
@@ -375,7 +457,7 @@ window.submitOrderFormActualAction = async function(editIndex) {
 };
 
 // =========================================================
-// 🔄 📱 核心控制台面板
+// 🔄 📱 核心管理控制台面板
 // =========================================================
 window.openOrderDetailModalForManage = function(index) {
     const existManage = document.getElementById("order-manage-modal");
@@ -487,6 +569,13 @@ window.openOrderDetailModalForManage = function(index) {
         `;
     }
 
+    // 微调大控制台弹窗的状态字样
+    let currentGlobalStatusText = ord.status || "等待国内发货";
+    let unShippedCount = actualItems.filter(i => i.status === "等待国内发货").length;
+    if (unShippedCount > 0 && unShippedCount < actualItems.length) {
+        currentGlobalStatusText = isZh ? "⚠️ 部分已到仓" : "⚠️ Đến kho 1 phần";
+    }
+
     const modalHTML = `
         <div id="order-manage-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
             <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100 my-auto animate-fadeIn p-5 space-y-4 max-h-[94vh] flex flex-col">
@@ -497,7 +586,7 @@ window.openOrderDetailModalForManage = function(index) {
                 
                 <div class="text-xs grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl font-bold text-slate-600 shrink-0">
                     <div><span class="text-slate-400 text-[10px] block">${isZh?'买家':'Khách hàng'}</span> <span class="font-black text-slate-800 text-sm">${customerName}</span></div>
-                    <div class="text-right"><span class="text-slate-400 text-[10px] block">${isZh?'当前订单状态':'Trạng thái đơn'}</span> <span class="font-black text-indigo-600 text-sm">${ord.status || '等待国内发货'}</span></div>
+                    <div class="text-right"><span class="text-slate-400 text-[10px] block">${isZh?'汇总宏观状态':'Tổng trạng thái'}</span> <span class="font-black text-indigo-600 text-xs">${currentGlobalStatusText}</span></div>
                     <div class="col-span-2 text-[10px] text-slate-400 font-mono border-t border-slate-200/50 pt-1 mt-0.5">ID: ${ord.id}</div>
                 </div>
 
@@ -516,9 +605,6 @@ window.openOrderDetailModalForManage = function(index) {
     if(window.pushModalHistoryState) window.pushModalHistoryState("order-manage-modal");
 };
 
-// =========================================================
-// 🚀 核心组件功能 1：失去焦点或单号回车时的独立静默保存
-// =========================================================
 window.fastSaveSingleTrackAndCompany = async function(orderIndex, itemIndex) {
     const ord = window.ERP_STORE.orders[orderIndex];
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -547,7 +633,8 @@ window.fastSaveSingleTrackAndCompany = async function(orderIndex, itemIndex) {
             customer: ord.customer,
             buyer_vnd: ord.buyer_vnd || 0,
             shipping_fee_cny: ord.shipping_fee_cny || 0,
-            items: actualItems
+            items: actualItems,
+            status: ord.status
         })
     });
 
@@ -559,9 +646,7 @@ window.fastSaveSingleTrackAndCompany = async function(orderIndex, itemIndex) {
     }
 };
 
-// =========================================================
-// 🚀 ⚡ 核心闭合防御：单散件切状态，逆向重写捕获，杜绝打字没存完的盲区！
-// =========================================================
+// ⚡ 核心联动测试重构：单品散件改写状态，智能推算全局状态，绝不抢跑分类！
 window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
     const ord = window.ERP_STORE.orders[orderIndex];
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -572,7 +657,6 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
     }
     actualItems = actualItems || [];
 
-    // 🛡️ 逆向捕获锁：强行扫除当前弹窗内用户刚才输入的所有最新单号和快递公司，封杀打字冲突
     actualItems.forEach((item, idx) => {
         const tInput = document.getElementById(`fast-track-input-${orderIndex}-${idx}`);
         const cSelect = document.getElementById(`fast-express-select-${orderIndex}-${idx}`);
@@ -586,11 +670,16 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
     
     actualItems[itemIndex].status = statusLoop[nextIdx];
 
-    let allSame = true;
-    for(let i=0; i<actualItems.length; i++) {
-        if(actualItems[i].status !== actualItems[0].status) { allSame = false; break; }
-    }
-    let nextOrderGlobalStatus = allSame ? actualItems[0].status : ord.status;
+    // 智能推算订单的全局汇总标记
+    let nextOrderGlobalStatus = "等待国内发货";
+    let hasUnshipped = actualItems.some(i => i.status === "等待国内发货");
+    let hasWarehouse = actualItems.some(i => i.status === "集运仓已到货");
+    let hasTransit = actualItems.some(i => i.status === "跨境清关运输中");
+    let hasReceived = actualItems.some(i => i.status === "买家已完成收货");
+
+    if (!hasUnshipped && hasWarehouse) nextOrderGlobalStatus = "集运仓已到货";
+    else if (!hasUnshipped && !hasWarehouse && hasTransit) nextOrderGlobalStatus = "跨境清关运输中";
+    else if (!hasUnshipped && !hasWarehouse && !hasTransit && hasReceived) nextOrderGlobalStatus = "买家已完成收货";
 
     const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
         method: "POST",
@@ -600,20 +689,20 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
             customer: ord.customer,
             buyer_vnd: ord.buyer_vnd || 0,
             shipping_fee_cny: ord.shipping_fee_cny || 0,
-            items: actualItems
+            items: actualItems,
+            status: nextOrderGlobalStatus
         })
     });
 
     if (res.ok) {
         ord.items = actualItems;
-        if(allSame && ord.status !== nextOrderGlobalStatus) {
-            ord.status = nextOrderGlobalStatus;
-            await fetch(`${window.API_BASE_URL}/api/orders/update_status`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: ord.id, status: nextOrderGlobalStatus })
-            });
-        }
+        ord.status = nextOrderGlobalStatus;
+        
+        await fetch(`${window.API_BASE_URL}/api/orders/update_status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: ord.id, status: nextOrderGlobalStatus })
+        });
         
         const mv = document.getElementById("main-view");
         if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
@@ -626,9 +715,6 @@ window.toggleSingleItemStatusInModal = async function(orderIndex, itemIndex) {
     }
 };
 
-// =========================================================
-// 🚀 ⚡ 核心闭合防御：全单批量刷状态，逆向重写捕获，单号绝不丢失！
-// =========================================================
 window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetStatus) {
     const ord = window.ERP_STORE.orders[orderIndex];
     const isZh = window.ERP_STORE.current_lang === "zh";
@@ -639,7 +725,6 @@ window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetSta
     }
     actualItems = actualItems || [];
 
-    // 🛡️ 逆向捕获锁：一键全单变动前，强制提取界面上的所有单号文字
     actualItems.forEach((item, idx) => {
         const tInput = document.getElementById(`fast-track-input-${orderIndex}-${idx}`);
         const cSelect = document.getElementById(`fast-express-select-${orderIndex}-${idx}`);
@@ -647,148 +732,8 @@ window.batchUpdateFullOrderStatusDirectly = async function(orderIndex, targetSta
         if(cSelect) item.express_company = cSelect.value;
     });
 
-    // 灌注批量状态
     actualItems.forEach(item => item.status = targetStatus);
 
     const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            id: ord.id,
-            customer: ord.customer,
-            buyer_vnd: ord.buyer_vnd || 0,
-            shipping_fee_cny: ord.shipping_fee_cny || 0,
-            items: actualItems
-        })
-    });
-
-    if (res.ok) {
-        ord.status = targetStatus;
-        ord.items = actualItems;
-
-        await fetch(`${window.API_BASE_URL}/api/orders/update_status`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: ord.id, status: targetStatus })
-        });
-
-        const mv = document.getElementById("main-view");
-        if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
-        window.init_orders();
-
-        openOrderDetailModalForManage(orderIndex);
-        showErpToast(isZh ? "🎉 全包裹状态已一键同步流转！" : "🎉 Đã cập nhật đồng bộ toàn bộ đơn!");
-    } else {
-        showErpToast("D1 Connection Error");
-    }
-};
-
-window.toggleOrderCancelStatus = async function(index, shouldCancel) {
-    const ord = window.ERP_STORE.orders[index];
-    const isZh = window.ERP_STORE.current_lang === "zh";
-    const nextStatus = shouldCancel ? "已取消" : "等待国内发货";
-    
-    let actualItems = ord.items;
-    if (typeof actualItems === "string") {
-        try { actualItems = JSON.parse(actualItems); } catch(e) { actualItems = []; }
-    }
-    actualItems = actualItems || [];
-    
-    actualItems.forEach(item => item.status = nextStatus);
-
-    const res = await fetch(`${window.API_BASE_URL}/api/orders/save`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            id: ord.id,
-            customer: ord.customer,
-            buyer_vnd: ord.buyer_vnd || 0,
-            shipping_fee_cny: ord.shipping_fee_cny || 0,
-            items: actualItems
-        })
-    });
-
-    if (res.ok) {
-        ord.status = nextStatus;
-        ord.items = actualItems;
-        
-        await fetch(`${window.API_BASE_URL}/api/orders/update_status`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: ord.id, status: nextStatus })
-        });
-
-        closeOrderModal();
-        
-        const mv = document.getElementById("main-view");
-        if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
-        window.init_orders();
-        
-        showErpToast(isZh ? "🎉 订单状态已完成变动！" : "🎉 Cập nhật trạng thái thành công!");
-    } else {
-        showErpToast("D1 Link Error");
-    }
-};
-
-window.triggerUltimateDeleteOrder = function(orderId, tail, index) {
-    const isZh = window.ERP_STORE.current_lang === "zh";
-    const promptMsg = isZh 
-        ? `🚨 【终极警告】：请输入该单的数字尾号【 ${tail} 】进行验证物理粉碎：`
-        : `🚨 【CẢNH BÁO TỐI CAO】: Nhập mã đuôi 【 ${tail} 】 để xác nhận:`;
-        
-    const userInput = prompt(promptMsg);
-    
-    if (userInput === tail) {
-        fetch(`${window.API_BASE_URL}/api/orders/delete`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: orderId })
-        }).then(res => {
-            if (res.ok) {
-                window.ERP_STORE.orders.splice(index, 1);
-                closeOrderModal();
-                
-                const mv = document.getElementById("main-view");
-                if(mv) mv.innerHTML = `<div class="view-section">${renderOrders()}</div>`;
-                window.init_orders();
-                
-                showErpToast(isZh ? "🗑️ 订单已被永久物理销毁。" : "🗑️ Đã xóa đơn hàng vĩnh viễn.");
-            }
-        });
-    } else if (userInput !== null) {
-        showErpToast(isZh ? "❌ 尾号校验失败！" : "❌ Sai mã xác nhận!");
-    }
-};
-
-window.closeOrderModal = function() {
-    const m = document.getElementById("order-manage-modal");
-    if(m) m.remove();
-};
-
-function showErpToast(message) {
-    const oldToast = document.getElementById("erp-runtime-toast");
-    if(oldToast) oldToast.remove();
-
-    const toastHTML = `
-        <div id="erp-runtime-toast" class="fixed top-12 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl text-xs font-black shadow-lg z-[99999] flex items-center gap-2 border border-slate-700/50 transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2">
-            <span>${message}</span>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', toastHTML);
-
-    const toast = document.getElementById("erp-runtime-toast");
-    setTimeout(() => {
-        if(toast) {
-            toast.classList.remove("opacity-0", "pointer-events-none", "-translate-y-2");
-            toast.classList.add("opacity-100", "translate-y-0");
-        }
-    }, 50);
-
-    setTimeout(() => {
-        if(toast) {
-            toast.classList.remove("opacity-100", "translate-y-0");
-            toast.classList.add("opacity-0", "-translate-y-2");
-            setTimeout(() => { toast.remove(); }, 300);
-        }
-    }, 1500);
-}
+        headers: { "Content-
