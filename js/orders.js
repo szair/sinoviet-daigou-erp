@@ -32,7 +32,8 @@
             window.ERP_STORE.orders = data || [];
             
             if (mv) mv.innerHTML = `<div class="view-section">${window.renderOrders()}</div>`;
-            window.init_orders();
+            
+            // 🛡️ 【终极修复】删除此处的 window.init_orders()！彻底切断“同步->渲染->再次初始化->同步”的无限死循环链条，页面闪烁立刻清零！
         } catch (e) {
             console.error("D1 API 连接失败:", e);
             if (mv) {
@@ -90,7 +91,7 @@
             }
             actualItems = actualItems || [];
 
-            if (currentFilter === "已取消") {
+            if (currentFilter === "Spacer" || currentFilter === "已取消") {
                 return ord.status === "已取消";
             }
             if (ord.status === "Alice" || ord.status === "已取消") return false;
