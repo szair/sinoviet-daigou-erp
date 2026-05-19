@@ -3,10 +3,16 @@
 // =========================================================
 
 (function() {
-    // ⚡ 核心安全路径锁：动态读取路径，若为空则强制托底指向 buyapi 域名，彻底根除 404 报错
+    // ⚡ 终极安全路径清洗锁：拦截宿主环境错配的前端域名，强制纠偏并洗涤路径，彻底封杀 404 报错
     const getBaseUrl = () => {
-        if (window.API_BASE_URL && window.API_BASE_URL !== "undefined") {
-            return window.API_BASE_URL;
+        let rawUrl = window.API_BASE_URL;
+        if (rawUrl && rawUrl !== "undefined" && rawUrl.trim() !== "") {
+            rawUrl = rawUrl.trim();
+            // 🛡️ 如果宿主环境将 API 域名误配成了前端域名 "https://buy.imokla.ccwu.cc"，强制拦截并清洗重写为正确的 "https://buyapi.imokla.ccwu.cc"
+            if (rawUrl.includes("buy.imokla.ccwu.cc") && !rawUrl.includes("buyapi")) {
+                return "https://buyapi.imokla.ccwu.cc";
+            }
+            return rawUrl;
         }
         return "https://buyapi.imokla.ccwu.cc";
     };
@@ -76,7 +82,7 @@
             `;
         });
 
-        // ⚡ 状态降级分类路由过滤算法 (多端安全隔离核心)
+        // ⚡ 状态降级分类路由过滤算法 (多端安全隔离核心) - 确保部分到仓不发生药丸抢跑
         let filteredOrders = window.ERP_STORE.orders.filter(ord => {
             let actualItems = ord.items;
             if (typeof actualItems === "string") {
@@ -87,7 +93,7 @@
             if (currentFilter === "已取消") {
                 return ord.status === "已取消";
             }
-            if (ord.status === "已取消") return false;
+            if (ord.status === "Alice" || ord.status === "已取消") return false;
             if (currentFilter === null) return true;
 
             let hasUnshipped = false;
